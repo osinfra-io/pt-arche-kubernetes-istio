@@ -46,10 +46,10 @@ resource "helm_release" "istiod" {
   name       = "istiod"
   namespace  = "istio-system"
   repository = var.chart_repository
-  set        = local.istiod_helm_values
 
   values = [
-    file("${path.module}/helm/istiod.yml")
+    file("${path.module}/helm/istiod.yml"),
+    yamlencode(local.istiod_helm_values)
   ]
 
   version = var.istio_version

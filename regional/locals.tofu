@@ -168,30 +168,54 @@ locals {
 
   istio_gateway_name = "istio-gateway-${module.core_helpers.region}-${module.core_helpers.zone}"
 
-  istiod_helm_values = [
-    for k, v in local.istiod_helm_values_map : {
-      name  = k
-      value = v
-    }
-  ]
+  istiod_helm_values = {
+    autoscaleMin = var.pilot_autoscale_min
 
-  istiod_helm_values_map = {
-    "autoscaleMin"                                    = var.pilot_autoscale_min
-    "deploymentLabels.tags\\.datadoghq\\.com/env"     = module.core_helpers.environment
-    "deploymentLabels.tags\\.datadoghq\\.com/version" = var.istio_version
-    "global.hub"                                      = "${var.artifact_registry}/istio"
-    "global.multiCluster.clusterName"                 = local.multi_cluster_name
-    "global.proxy.resources.limits.cpu"               = var.proxy_cpu_limits
-    "global.proxy.resources.limits.memory"            = var.proxy_memory_limits
-    "global.proxy.resources.requests.cpu"             = var.proxy_cpu_requests
-    "global.proxy.resources.requests.memory"          = var.proxy_memory_requests
-    "podLabels.tags\\.datadoghq\\.com/env"            = module.core_helpers.environment
-    "podLabels.tags\\.datadoghq\\.com/version"        = var.istio_version
-    "replicaCount"                                    = var.pilot_replica_count
-    "resources.limits.cpu"                            = var.pilot_cpu_limits
-    "resources.limits.memory"                         = var.pilot_memory_limits
-    "resources.requests.cpu"                          = var.pilot_cpu_requests
-    "resources.requests.memory"                       = var.pilot_memory_requests
+    deploymentLabels = {
+      "tags.datadoghq.com/env"     = module.core_helpers.environment
+      "tags.datadoghq.com/version" = var.istio_version
+    }
+
+    global = {
+      hub = "${var.artifact_registry}/istio"
+
+      multiCluster = {
+        clusterName = local.multi_cluster_name
+      }
+
+      proxy = {
+        resources = {
+          limits = {
+            cpu    = var.proxy_cpu_limits
+            memory = var.proxy_memory_limits
+          }
+
+          requests = {
+            cpu    = var.proxy_cpu_requests
+            memory = var.proxy_memory_requests
+          }
+        }
+      }
+    }
+
+    podLabels = {
+      "tags.datadoghq.com/env"     = module.core_helpers.environment
+      "tags.datadoghq.com/version" = var.istio_version
+    }
+
+    replicaCount = var.pilot_replica_count
+
+    resources = {
+      limits = {
+        cpu    = var.pilot_cpu_limits
+        memory = var.pilot_memory_limits
+      }
+
+      requests = {
+        cpu    = var.pilot_cpu_requests
+        memory = var.pilot_memory_requests
+      }
+    }
   }
 
   multi_cluster_name = module.core_helpers.zone != null ? "${var.cluster_prefix}-${module.core_helpers.region}-${module.core_helpers.zone}-${module.core_helpers.env}" : "${var.cluster_prefix}-${module.core_helpers.region}-${module.core_helpers.env}"

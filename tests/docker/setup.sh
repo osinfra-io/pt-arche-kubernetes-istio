@@ -73,13 +73,13 @@ kubectl create namespace istio-ingress --dry-run=client --output=yaml |
   kubectl apply --filename -
 
 openssl req \
-  -addext "subjectAltName=DNS:localhost" \
+  -addext "subjectAltName=DNS:dev.localhost" \
   -keyout "${temporary_directory}/tls.key" \
   -new \
   -newkey rsa:2048 \
   -nodes \
   -out "${temporary_directory}/tls.crt" \
-  -subj "/CN=localhost" \
+  -subj "/CN=dev.localhost" \
   -x509 \
   -days 1 \
   >/dev/null 2>&1
@@ -96,4 +96,4 @@ kubectl apply --filename "${SCRIPT_DIR}/istio-auth.yaml"
 kubectl wait --for=condition=Programmed gateway/gateway --namespace=istio-ingress --timeout=120s
 kubectl rollout status deployment/istio-test --namespace=istio-test --timeout=180s
 
-echo "Open https://localhost/istio-test/health/basic and accept the temporary certificate."
+echo "Open https://dev.localhost/istio-test/health/basic and accept the temporary certificate."

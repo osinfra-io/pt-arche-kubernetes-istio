@@ -16,7 +16,7 @@ items:
         - allowedRoutes:
             namespaces:
               from: All
-          hostname: localhost
+          hostname: dev.localhost
           name: https
           port: 443
           protocol: HTTPS
@@ -76,7 +76,7 @@ items:
       namespace: authentik
     spec:
       hostnames:
-        - localhost
+        - dev.localhost
       parentRefs:
         - name: gateway
           namespace: istio-ingress
@@ -95,7 +95,7 @@ items:
       namespace: istio-test
     spec:
       hostnames:
-        - localhost
+        - dev.localhost
       parentRefs:
         - name: gateway
           namespace: istio-ingress
@@ -120,7 +120,7 @@ items:
         - to:
             - operation:
                 hosts:
-                  - localhost
+                  - dev.localhost
                 paths:
                   - /istio-test
                   - /istio-test/*

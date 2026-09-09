@@ -1,0 +1,130 @@
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: istio-ingress
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway
+      namespace: istio-ingress
+    spec:
+      gatewayClassName: istio
+      listeners:
+        - allowedRoutes:
+            namespaces:
+              from: All
+          hostname: gateway.localhost
+          name: https
+          port: 443
+          protocol: HTTPS
+          tls:
+            certificateRefs:
+              - name: gateway-localhost-tls
+            mode: Terminate
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      labels:
+        istio-injection: enabled
+      name: istio-test
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: istio-test
+      namespace: istio-test
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: istio-test
+      template:
+        metadata:
+          labels:
+            app: istio-test
+        spec:
+          containers:
+            - env:
+                - name: ENABLE_PROFILER
+                  value: "false"
+                - name: ENABLE_TRACING
+                  value: "false"
+              image: istio-test:local
+              imagePullPolicy: Never
+              name: istio-test
+              ports:
+                - containerPort: 8080
+                  name: http
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: istio-test
+      namespace: istio-test
+    spec:
+      ports:
+        - name: http
+          port: 8080
+          targetPort: http
+      selector:
+        app: istio-test
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: authentik-outpost
+      namespace: authentik
+    spec:
+      hostnames:
+        - gateway.localhost
+      parentRefs:
+        - name: gateway
+          namespace: istio-ingress
+      rules:
+        - backendRefs:
+            - name: authentik-server
+              port: 9000
+          matches:
+            - path:
+                type: PathPrefix
+                value: /outpost.goauthentik.io
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: istio-test
+      namespace: istio-test
+    spec:
+      hostnames:
+        - gateway.localhost
+      parentRefs:
+        - name: gateway
+          namespace: istio-ingress
+      rules:
+        - backendRefs:
+            - name: istio-test
+              port: 8080
+          matches:
+            - path:
+                type: PathPrefix
+                value: /istio-test
+  - apiVersion: security.istio.io/v1
+    kind: AuthorizationPolicy
+    metadata:
+      name: authentik
+      namespace: istio-ingress
+    spec:
+      action: CUSTOM
+      provider:
+        name: authentik
+      rules:
+        - to:
+            - operation:
+                hosts:
+                  - gateway.localhost
+                paths:
+                  - /istio-test
+                  - /istio-test/*
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway

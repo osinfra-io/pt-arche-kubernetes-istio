@@ -75,7 +75,7 @@ tofu -chdir=tests/docker/regional/config init
 tofu -chdir=tests/docker/regional/config apply
 ```
 
-The Authentik test OpenTofu creates the `https://gateway.localhost` proxy application, assigns it to the embedded outpost, and binds the `all` group. Do not create these objects with Authentik API calls or through the UI.
+The Authentik test OpenTofu creates the `Localhost` application and `https://localhost` proxy provider, assigns the provider to the embedded outpost, and binds the `all` group. Do not create these objects with Authentik API calls or through the UI.
 
 Switch to the Docker Desktop cluster, then run the Istio fixture from this repository:
 
@@ -86,12 +86,12 @@ export ISTIO_TEST_CONTEXT="../../pneuma/pt-pneuma-istio-test"
 tests/docker/setup.sh
 ```
 
-The setup script downloads the module's pinned Istio version, installs Gateway API and Istio, builds and imports the local `istio-test` image, generates a one-day TLS certificate for `gateway.localhost`, and deploys the gateway authentication resources.
+The setup script downloads the module's pinned Istio version, installs Gateway API and Istio, builds and imports the local `istio-test` image, generates a one-day TLS certificate for `localhost`, and deploys the gateway authentication resources.
 
 Open:
 
 ```none
-https://gateway.localhost/istio-test/health/basic
+https://localhost/istio-test/health/basic
 ```
 
 Accept the expected temporary self-signed certificate warning, select Google on the Authentik login page, and authenticate with an allowed Workspace account. A successful flow returns the `istio-test` health response.

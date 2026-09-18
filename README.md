@@ -46,66 +46,10 @@ tofu test
 
 ### Local browser authentication
 
-The `tests/docker` fixture exercises browser authentication end to end with Docker Desktop Kubernetes, the Authentik Docker fixture from [`pt-arche-kubernetes-authentik`](https://github.com/osinfra-io/pt-arche-kubernetes-authentik), and the [`pt-pneuma-istio-test`](https://github.com/osinfra-io/pt-pneuma-istio-test) application.
+The `tests/docker` fixture exercises Istio and Authentik browser authentication with Docker Desktop Kubernetes and [`pt-pneuma-istio-test`](https://github.com/osinfra-io/pt-pneuma-istio-test). Install the [`platform-grouping` plugin](https://github.com/osinfra-io/pt-ai-plugins/tree/main/plugins/platform-grouping) and ask Copilot CLI to use the `test-istio-authentik-locally` skill instead of running the fixture manually. The skill discovers the related repositories, runs the setup and verification checks, diagnoses failures, supports optional Google OAuth testing, and performs cleanup when requested.
 
-The test verifies:
-
-- an unauthenticated `/istio-test` request is redirected through the Authentik embedded outpost;
-- Google authenticates the user and Authentik provisions the user into the `all` group;
-- the Authentik application policy binding permits members of `all`;
-- `/outpost.goauthentik.io` callbacks return through the Istio gateway;
-- the authenticated request reaches the `istio-test` workload.
-
-Prerequisites:
-
-- Docker Desktop Kubernetes enabled;
-- `kubectl`, `docker`, `curl`, `openssl`, and OpenTofu available;
-- the `pt-arche-kubernetes-authentik`, `pt-arche-kubernetes-istio`, and `pt-pneuma-istio-test` repositories checked out;
-- a Google OAuth web client allowing `http://localhost:9000/source/oauth/callback/google/`.
-
-Start and configure Authentik from the `pt-arche-kubernetes-authentik` repository:
-
-```bash
-export TF_VAR_google_oauth_client_id="<google-client-id>"
-export TF_VAR_google_oauth_client_secret="<google-client-secret>"
-
-docker compose --file tests/docker/compose.yml up --detach
-tests/docker/wait-for-authentik.sh
-tofu -chdir=tests/docker/regional/config init
-tofu -chdir=tests/docker/regional/config apply
-```
-
-The Authentik test OpenTofu creates the `Development` application and `https://dev.localhost` proxy provider, assigns the provider to the embedded outpost, and binds the `all` group. Do not create these objects with Authentik API calls or through the UI.
-
-Switch to the Docker Desktop cluster, then run the Istio fixture from this repository:
-
-```bash
-kubectl config use-context docker-desktop
-
-export ISTIO_TEST_CONTEXT="../../pneuma/pt-pneuma-istio-test"
-tests/docker/setup.sh
-```
-
-The setup script downloads the module's pinned Istio version, installs Gateway API and Istio, builds and imports the local `istio-test` image, generates a one-day TLS certificate for `dev.localhost`, and deploys the gateway authentication resources.
-
-Open:
-
-```none
-https://dev.localhost/istio-test/health/basic
-```
-
-Accept the expected temporary self-signed certificate warning, select Google on the Authentik login page, and authenticate with an allowed Workspace account. A successful flow returns the `istio-test` health response.
-
-Remove the Kubernetes fixture:
-
-```bash
-tests/docker/teardown.sh
-```
-
-Remove the Authentik fixture from its repository:
-
-```bash
-docker compose --file tests/docker/compose.yml down --volumes
+```text
+Use the test-istio-authentik-locally skill to test this checkout.
 ```
 
 ## 📦 Release

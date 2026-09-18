@@ -4,8 +4,44 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.4.0}"
-readonly ISTIO_TEST_CONTEXT="${ISTIO_TEST_CONTEXT:?set ISTIO_TEST_CONTEXT to the pt-pneuma-istio-test checkout}"
 readonly ISTIO_VERSION="${ISTIO_VERSION:-1.30.3}"
+
+# Locate the pt-pneuma-istio-test checkout so contributors don't have to know the exact relative
+# path between repos. Honors an explicit ISTIO_TEST_CONTEXT override first, then checks common
+# checkout layouts (plain sibling clone, and the aggregated platform-group workspace), and
+# finally falls back to a shallow search from the repository root.
+resolve_istio_test_context() {
+  if [ -n "${ISTIO_TEST_CONTEXT:-}" ]; then
+    echo "${ISTIO_TEST_CONTEXT}"
+    return 0
+  fi
+
+  local repository_root candidate
+  repository_root="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+  for candidate in \
+    "${repository_root}/../pt-pneuma-istio-test" \
+    "${repository_root}/../../pneuma/pt-pneuma-istio-test"; do
+    if [ -f "${candidate}/Dockerfile" ]; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
+
+  candidate="$(find "${repository_root}/.." -maxdepth 3 -type d -name pt-pneuma-istio-test -print -quit 2>/dev/null || true)"
+  if [ -n "${candidate}" ] && [ -f "${candidate}/Dockerfile" ]; then
+    echo "${candidate}"
+    return 0
+  fi
+
+  return 1
+}
+
+if ! ISTIO_TEST_CONTEXT="$(resolve_istio_test_context)"; then
+  echo "Could not locate the pt-pneuma-istio-test checkout; set ISTIO_TEST_CONTEXT to its path" >&2
+  exit 1
+fi
+readonly ISTIO_TEST_CONTEXT
 
 if [ "$(kubectl config current-context)" != "docker-desktop" ]; then
   echo "kubectl must use the docker-desktop context" >&2

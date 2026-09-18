@@ -44,6 +44,14 @@ tofu init
 tofu test
 ```
 
+### Local browser authentication
+
+The `tests/docker` fixture exercises Istio and Authentik browser authentication with Docker Desktop Kubernetes and [`pt-pneuma-istio-test`](https://github.com/osinfra-io/pt-pneuma-istio-test). Install the [`platform-grouping` plugin](https://github.com/osinfra-io/pt-ai-plugins/tree/main/plugins/platform-grouping) and ask Copilot CLI to use the `test-istio-authentik-locally` skill instead of running the fixture manually. The skill discovers the related repositories, runs the setup and verification checks, diagnoses failures, supports optional Google OAuth testing, and performs cleanup when requested.
+
+```text
+Use the test-istio-authentik-locally skill to test this checkout.
+```
+
 ## 📦 Release
 
 To release a new version, simply push a new tag to the repository. The tag should be in the format `vX.Y.Z` where `X`, `Y`, and `Z` are integers.

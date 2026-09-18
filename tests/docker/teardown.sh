@@ -5,6 +5,11 @@ set -euo pipefail
 readonly GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.4.0}"
 readonly ISTIO_VERSION="${ISTIO_VERSION:-1.30.3}"
 
+if [ "$(kubectl config current-context)" != "docker-desktop" ]; then
+  echo "kubectl must use the docker-desktop context" >&2
+  exit 1
+fi
+
 kubectl delete namespace authentik istio-ingress istio-test --ignore-not-found
 
 temporary_directory="$(mktemp --directory)"
@@ -23,8 +28,21 @@ case "$(uname -m)" in
     ;;
 esac
 
+case "$(uname -s)" in
+  Darwin)
+    istio_platform="osx"
+    ;;
+  Linux)
+    istio_platform="linux"
+    ;;
+  *)
+    echo "Unsupported operating system: $(uname -s)" >&2
+    exit 1
+    ;;
+esac
+
 curl --fail --location --silent --show-error \
-  "https://github.com/istio/istio/releases/download/${ISTIO_VERSION}/istio-${ISTIO_VERSION}-linux-${istio_architecture}.tar.gz" |
+  "https://github.com/istio/istio/releases/download/${ISTIO_VERSION}/istio-${ISTIO_VERSION}-${istio_platform}-${istio_architecture}.tar.gz" |
   tar --extract --gzip --directory="${temporary_directory}"
 
 "${temporary_directory}/istio-${ISTIO_VERSION}/bin/istioctl" uninstall --purge --skip-confirmation

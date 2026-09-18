@@ -57,6 +57,10 @@ items:
               ports:
                 - containerPort: 8080
                   name: http
+              readinessProbe:
+                httpGet:
+                  path: /istio-test/health/basic
+                  port: http
   - apiVersion: v1
     kind: Service
     metadata:

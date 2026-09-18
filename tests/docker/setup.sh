@@ -70,8 +70,21 @@ case "$(uname -m)" in
     ;;
 esac
 
+case "$(uname -s)" in
+  Darwin)
+    istio_platform="osx"
+    ;;
+  Linux)
+    istio_platform="linux"
+    ;;
+  *)
+    echo "Unsupported operating system: $(uname -s)" >&2
+    exit 1
+    ;;
+esac
+
 curl --fail --location --silent --show-error \
-  "https://github.com/istio/istio/releases/download/${ISTIO_VERSION}/istio-${ISTIO_VERSION}-linux-${istio_architecture}.tar.gz" |
+  "https://github.com/istio/istio/releases/download/${ISTIO_VERSION}/istio-${ISTIO_VERSION}-${istio_platform}-${istio_architecture}.tar.gz" |
   tar --extract --gzip --directory="${temporary_directory}"
 
 readonly ISTIOCTL="${temporary_directory}/istio-${ISTIO_VERSION}/bin/istioctl"

@@ -145,4 +145,4 @@ kubectl apply --filename "${SCRIPT_DIR}/istio-auth.yaml"
 kubectl wait --for=condition=Programmed gateway/gateway --namespace=istio-ingress --timeout=120s
 kubectl rollout status deployment/istio-test --namespace=istio-test --timeout=180s
 
-echo "Open https://dev.localhost/istio-test/health/basic and accept the temporary certificate."
+echo "Setup complete. Open https://dev.localhost/istio-test/auth and accept the temporary certificate."

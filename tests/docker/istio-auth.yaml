@@ -59,7 +59,7 @@ items:
                   name: http
               readinessProbe:
                 httpGet:
-                  path: /istio-test/health/basic
+                  path: /istio-test/health
                   port: http
   - apiVersion: v1
     kind: Service
@@ -128,6 +128,9 @@ items:
                 paths:
                   - /istio-test
                   - /istio-test/*
+                notPaths:
+                  - /istio-test/health
+                  - /istio-test/metadata/*
       targetRefs:
         - group: gateway.networking.k8s.io
           kind: Gateway

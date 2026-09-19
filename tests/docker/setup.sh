@@ -142,6 +142,12 @@ kubectl create secret tls gateway-localhost-tls \
   kubectl apply --filename -
 
 kubectl apply --filename "${SCRIPT_DIR}/istio-auth.yaml"
+metadata_mock_ip="$(kubectl get service metadata-mock --namespace=istio-test --output=jsonpath='{.spec.clusterIP}')"
+kubectl patch deployment istio-test \
+  --namespace=istio-test \
+  --type=strategic \
+  --patch "{\"spec\":{\"template\":{\"spec\":{\"hostAliases\":[{\"ip\":\"${metadata_mock_ip}\",\"hostnames\":[\"metadata.google.internal\"]}]}}}}"
+kubectl rollout status deployment/metadata-mock --namespace=istio-test --timeout=120s
 kubectl wait --for=condition=Programmed gateway/gateway --namespace=istio-ingress --timeout=120s
 kubectl rollout status deployment/istio-test --namespace=istio-test --timeout=180s
 

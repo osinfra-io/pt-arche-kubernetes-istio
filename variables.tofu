@@ -13,9 +13,9 @@ variable "cloud_armor_allow_rules" {
   validation {
     condition = alltrue([
       for rule in values(var.cloud_armor_allow_rules) :
-      rule.priority > 0 && rule.priority < 10000
+      rule.priority == floor(rule.priority) && rule.priority > 0 && rule.priority < 10000
     ])
-    error_message = "Cloud Armor allow rule priorities must be between 1 and 9999 so they run before the preconfigured WAF rules."
+    error_message = "Cloud Armor allow rule priorities must be integers between 1 and 9999 so they run before the preconfigured WAF rules."
   }
 
   validation {

@@ -30,6 +30,56 @@ items:
       labels:
         istio-injection: enabled
       name: istio-test
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: metadata-mock-content
+      namespace: istio-test
+    data:
+      cluster-name: docker-desktop
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: metadata-mock
+      namespace: istio-test
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: metadata-mock
+      template:
+        metadata:
+          labels:
+            app: metadata-mock
+        spec:
+          containers:
+            - command:
+                - sh
+                - -c
+                - >-
+                  mkdir -p /www/computeMetadata/v1/instance/attributes &&
+                  cp /config/cluster-name /www/computeMetadata/v1/instance/attributes/cluster-name &&
+                  httpd -f -p 8080 -h /www
+              image: busybox:1.37
+              name: metadata-mock
+              volumeMounts:
+                - mountPath: /config
+                  name: content
+          volumes:
+            - configMap:
+                name: metadata-mock-content
+              name: content
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: metadata-mock
+      namespace: istio-test
+    spec:
+      ports:
+        - port: 80
+          targetPort: 8080
+      selector:
+        app: metadata-mock
   - apiVersion: apps/v1
     kind: Deployment
     metadata:

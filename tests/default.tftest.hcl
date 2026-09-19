@@ -27,6 +27,14 @@ run "default" {
   }
 
   variables {
+    cloud_armor_allow_rules = {
+      authenticated_api = {
+        description = "Allow authenticated API configuration"
+        expression  = "request.headers['host'] == 'authentik.mock-domain' && request.path.startsWith('/api/v3/')"
+        priority    = 9000
+      }
+    }
+
     gateway_dns = {
       "mock-environment.mock-subdomain.mock-domain" = {
         managed_zone = "mock-environment-mock-subdomain-mock-domain"

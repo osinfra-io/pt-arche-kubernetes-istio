@@ -18,7 +18,8 @@ terraform {
 module "test" {
   source = "../../../"
 
-  gateway_dns = var.gateway_dns
+  cloud_armor_allow_rules = var.cloud_armor_allow_rules
+  gateway_dns             = var.gateway_dns
 
   labels = {
     "mock-key" = "mock-value"

@@ -72,6 +72,24 @@ resource "google_compute_security_policy" "istio_gateway" {
   name    = "istio-gateway"
   project = var.project
 
+  dynamic "rule" {
+    for_each = var.cloud_armor_allow_rules
+
+    content {
+      action      = "allow"
+      description = rule.value.description
+
+      match {
+        expr {
+          expression = rule.value.expression
+        }
+      }
+
+      preview  = false
+      priority = rule.value.priority
+    }
+  }
+
   rule {
     action      = "throttle"
     description = "Rate limit all user IPs"

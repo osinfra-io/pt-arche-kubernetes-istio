@@ -78,7 +78,7 @@ variable "gateway_memory_requests" {
 variable "istio_version" {
   description = "The version to install, this is used for the chart as well as the image tag"
   type        = string
-  default     = "2.28.0-dev.1"
+  default     = "1.31.0"
 }
 
 variable "labels" {

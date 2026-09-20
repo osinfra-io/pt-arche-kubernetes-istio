@@ -137,4 +137,13 @@ locals {
       sensitivity = 1
     }
   ]
+
+  # Groups var.cloud_armor_waf_exclusions by preconfigured rule set name so the rule dynamic block
+  # above can look up the exclusions (if any) that apply to each preconfigured WAF rule it renders.
+  waf_exclusions_by_rule_set = {
+    for rule in local.preconfigured_waf_rules : rule.name => [
+      for exclusion in var.cloud_armor_waf_exclusions : exclusion
+      if exclusion.target_rule_set == rule.name
+    ]
+  }
 }

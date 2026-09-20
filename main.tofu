@@ -145,6 +145,30 @@ resource "google_compute_security_policy" "istio_gateway" {
         }
       }
 
+      dynamic "preconfigured_waf_config" {
+        for_each = length(local.waf_exclusions_by_rule_set[rule.value.name]) > 0 ? [1] : []
+
+        content {
+          dynamic "exclusion" {
+            for_each = local.waf_exclusions_by_rule_set[rule.value.name]
+
+            content {
+              target_rule_ids = exclusion.value.target_rule_ids
+              target_rule_set = exclusion.value.target_rule_set
+
+              dynamic "request_query_param" {
+                for_each = exclusion.value.request_query_param_names
+
+                content {
+                  operator = "EQUALS"
+                  value    = request_query_param.value
+                }
+              }
+            }
+          }
+        }
+      }
+
       preview  = rule.value.preview
       priority = rule.value.priority
     }

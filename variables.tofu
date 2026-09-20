@@ -24,6 +24,16 @@ variable "cloud_armor_allow_rules" {
   }
 }
 
+variable "cloud_armor_waf_exclusions" {
+  description = "Scoped preconfigured WAF exclusions that exclude specific request query parameter values from inspection by specific rule IDs, instead of allowing the entire request past every preconfigured WAF rule"
+  type = list(object({
+    request_query_param_names = list(string)
+    target_rule_ids           = list(string)
+    target_rule_set           = string
+  }))
+  default = []
+}
+
 variable "gateway_dns" {
   description = "Map of attributes for the Istio gateway domain names, it is also used to create the managed certificate resource"
   type = map(object({

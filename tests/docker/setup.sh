@@ -4,7 +4,7 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.4.0}"
-readonly ISTIO_VERSION="${ISTIO_VERSION:-1.30.3}"
+readonly ISTIO_VERSION="${ISTIO_VERSION:-1.31.0}"
 
 # Locate the pt-pneuma-istio-test checkout so contributors don't have to know the exact relative
 # path between repos. Honors an explicit ISTIO_TEST_CONTEXT override first, then checks common

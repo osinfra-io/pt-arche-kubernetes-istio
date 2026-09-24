@@ -23,6 +23,7 @@ module "test" {
 
   artifact_registry    = "mock-docker.pkg.dev/mock-project/mock-virtual"
   cluster_prefix       = "mock"
+  enable_ambient       = true
   enable_istio_gateway = true
   gateway_dns          = var.gateway_dns
 

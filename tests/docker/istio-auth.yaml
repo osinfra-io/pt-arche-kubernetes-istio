@@ -28,7 +28,7 @@ items:
     kind: Namespace
     metadata:
       labels:
-        istio-injection: enabled
+        istio.io/dataplane-mode: ambient
       name: istio-test
   - apiVersion: v1
     kind: ConfigMap

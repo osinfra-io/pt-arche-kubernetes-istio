@@ -55,6 +55,98 @@ resource "helm_release" "istiod" {
   version = var.istio_version
 }
 
+resource "helm_release" "cni" {
+  depends_on = [
+    helm_release.istiod
+  ]
+
+  lifecycle {
+    enabled = var.enable_ambient
+  }
+
+  chart      = "cni"
+  name       = "istio-cni"
+  namespace  = "istio-system"
+  repository = var.chart_repository
+
+  values = [
+    yamlencode({
+      ambient = {
+        dnsCapture = true
+        enabled    = true
+      }
+
+      global = {
+        hub = "${var.artifact_registry}/istio"
+      }
+
+      podLabels = {
+        "tags.datadoghq.com/env"     = module.core_helpers.environment
+        "tags.datadoghq.com/version" = var.istio_version
+      }
+    })
+  ]
+
+  version = var.istio_version
+}
+
+resource "helm_release" "ztunnel" {
+  depends_on = [
+    helm_release.cni
+  ]
+
+  lifecycle {
+    enabled = var.enable_ambient
+  }
+
+  chart      = "ztunnel"
+  name       = "ztunnel"
+  namespace  = "istio-system"
+  repository = var.chart_repository
+
+  values = [
+    yamlencode({
+      global = {
+        hub = "${var.artifact_registry}/istio"
+      }
+
+      meshConfig = {
+        defaultConfig = {
+          proxyMetadata = {
+            ISTIO_META_DNS_CAPTURE  = "true"
+            ISTIO_META_ENABLE_HBONE = "true"
+          }
+        }
+      }
+
+      multiCluster = {
+        clusterName = local.multi_cluster_name
+      }
+
+      network = var.istio_network
+
+      podLabels = {
+        "tags.datadoghq.com/env"     = module.core_helpers.environment
+        "tags.datadoghq.com/version" = var.ztunnel_version
+      }
+
+      resources = {
+        limits = {
+          cpu    = var.ztunnel_cpu_limits
+          memory = var.ztunnel_memory_limits
+        }
+
+        requests = {
+          cpu    = var.ztunnel_cpu_requests
+          memory = var.ztunnel_memory_requests
+        }
+      }
+    })
+  ]
+
+  version = var.ztunnel_version
+}
+
 # Kubernetes Cluster Role Binding Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/cluster_role_binding_v1
 

@@ -18,6 +18,12 @@ variable "cluster_prefix" {
   type        = string
 }
 
+variable "enable_ambient" {
+  description = "Enable the ambient mesh components (istio-cni and ztunnel)"
+  type        = bool
+  default     = true
+}
+
 variable "enable_istio_gateway" {
   description = "Enable the Istio gateway, used for ingress traffic into the mesh"
   type        = bool
@@ -73,6 +79,12 @@ variable "gateway_memory_requests" {
   description = "The memory request for the Istio gateway"
   type        = string
   default     = "32Mi"
+}
+
+variable "istio_network" {
+  description = "The logical Istio network name for same-network ambient multicluster traffic"
+  type        = string
+  default     = "standard-shared"
 }
 
 variable "istio_version" {
@@ -169,4 +181,34 @@ variable "tls_self_signed_cert_cert_manager_root_key" {
   description = "The private key for the cert-manager root certificate"
   type        = string
   sensitive   = true
+}
+
+variable "ztunnel_cpu_limits" {
+  description = "The CPU limit for ztunnel"
+  type        = string
+  default     = "500m"
+}
+
+variable "ztunnel_cpu_requests" {
+  description = "The CPU request for ztunnel"
+  type        = string
+  default     = "250m"
+}
+
+variable "ztunnel_memory_limits" {
+  description = "The memory limit for ztunnel"
+  type        = string
+  default     = "512Mi"
+}
+
+variable "ztunnel_memory_requests" {
+  description = "The memory request for ztunnel"
+  type        = string
+  default     = "256Mi"
+}
+
+variable "ztunnel_version" {
+  description = "The ztunnel chart version to install"
+  type        = string
+  default     = "1.31.0"
 }

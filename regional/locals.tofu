@@ -183,6 +183,8 @@ locals {
         clusterName = local.multi_cluster_name
       }
 
+      network = var.istio_network
+
       proxy = {
         resources = {
           limits = {

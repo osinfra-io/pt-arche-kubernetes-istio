@@ -2,6 +2,8 @@ autoscaleEnabled: true
 autoscaleMax: 5
 autoscaleMin: 1
 
+profile: ambient
+
 cpu:
   targetAverageUtilization: 85
 

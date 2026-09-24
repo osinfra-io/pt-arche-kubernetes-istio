@@ -90,7 +90,7 @@ curl --fail --location --silent --show-error \
 readonly ISTIOCTL="${temporary_directory}/istio-${ISTIO_VERSION}/bin/istioctl"
 
 "${ISTIOCTL}" install --skip-confirmation \
-  --set profile=minimal \
+  --set profile=ambient \
   --set meshConfig.extensionProviders[0].name=authentik \
   --set meshConfig.extensionProviders[0].envoyExtAuthzHttp.service=authentik-server.authentik.svc.cluster.local \
   --set meshConfig.extensionProviders[0].envoyExtAuthzHttp.port=9000 \

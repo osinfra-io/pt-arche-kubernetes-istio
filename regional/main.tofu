@@ -80,6 +80,11 @@ resource "helm_release" "cni" {
         hub = "${var.artifact_registry}/istio"
       }
 
+      # Selects the istio-cni chart's bundled GKE platform profile, which unsets cniBinDir so the
+      # chart autodetects the GKE node's binary path and enables the ResourceQuota required to
+      # admit the CNI and ztunnel system-node-critical pods.
+      platform = "gke"
+
       podLabels = {
         "tags.datadoghq.com/env"     = module.core_helpers.environment
         "tags.datadoghq.com/version" = var.istio_version

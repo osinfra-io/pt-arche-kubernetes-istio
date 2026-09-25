@@ -90,7 +90,7 @@ variable "istio_network" {
 variable "istio_version" {
   description = "The version to install, this is used for the chart as well as the image tag"
   type        = string
-  default     = "1.31.0"
+  default     = "1.30.5"
 }
 
 variable "labels" {
@@ -210,5 +210,5 @@ variable "ztunnel_memory_requests" {
 variable "ztunnel_version" {
   description = "The ztunnel chart version to install"
   type        = string
-  default     = "1.31.0"
+  default     = "1.30.5"
 }

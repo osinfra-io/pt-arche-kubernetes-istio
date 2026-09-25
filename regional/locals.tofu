@@ -171,11 +171,16 @@ locals {
     }
 
     # Pilot env vars required for ambient multicluster on separate logical networks
-    # (see istio_network below and the east-west gateway in main.tofu). Only relevant when
-    # ambient is enabled; both default to false upstream so they're omitted otherwise.
+    # (see istio_network below and the east-west gateway in main.tofu).
+    # AMBIENT_ENABLE_MULTI_NETWORK_INGRESS extends the multi-network EDS/gateway-selection
+    # path (governed by AMBIENT_ENABLE_MULTI_NETWORK) to the ingress `Gateway` proxies
+    # themselves, without which cross-cluster endpoints are silently filtered out of the
+    # ingress gateway's EDS view. Only relevant when ambient is enabled; all default to
+    # false upstream so they're omitted otherwise.
     env = var.enable_ambient ? {
-      AMBIENT_ENABLE_BAGGAGE       = "true"
-      AMBIENT_ENABLE_MULTI_NETWORK = "true"
+      AMBIENT_ENABLE_BAGGAGE               = "true"
+      AMBIENT_ENABLE_MULTI_NETWORK         = "true"
+      AMBIENT_ENABLE_MULTI_NETWORK_INGRESS = "true"
     } : {}
 
     global = {
@@ -201,6 +206,28 @@ locals {
         }
       }
     }
+
+    # Marks Services labeled istio.io/global: "true" as GLOBAL scope. Ambient's remote-cluster
+    # service discovery defaults every Service to LOCAL scope and drops it entirely from
+    # cross-cluster EDS unless it matches a GLOBAL serviceScopeConfigs rule here — the
+    # istio.io/global label alone (see README) has no effect without this matching rule.
+    meshConfig = var.enable_ambient ? {
+      serviceScopeConfigs = [
+        {
+          scope = "GLOBAL"
+
+          servicesSelector = {
+            matchExpressions = [
+              {
+                key      = "istio.io/global"
+                operator = "In"
+                values   = ["true"]
+              }
+            ]
+          }
+        }
+      ]
+    } : {}
 
     podLabels = {
       "tags.datadoghq.com/env"     = module.core_helpers.environment

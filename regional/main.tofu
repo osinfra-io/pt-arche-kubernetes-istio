@@ -325,16 +325,19 @@ resource "kubernetes_manifest" "istio_east_west_gateway" {
       # Keeps the auto-provisioned Service/Deployment off the public internet — cross-cluster
       # mesh traffic stays within the Shared VPC. The annotation only affects the Service; it's
       # harmless on the Deployment.
+      #
+      # topology.istio.io/network must be repeated here: when infrastructure.labels is set,
+      # Istio's gateway deployment controller uses it exclusively for the generated Service and
+      # does not merge in the Gateway's own top-level metadata.labels. Without it here, the
+      # auto-provisioned Service never carries the network label, so pilot can't discover this
+      # gateway as a network gateway for cross-cluster HBONE routing.
       infrastructure = {
         annotations = {
           "networking.gke.io/load-balancer-type" = "Internal"
         }
 
         labels = {
-          "tags.datadoghq.com/env"     = module.core_helpers.environment
-          "tags.datadoghq.com/service" = "istio-eastwestgateway"
-          "tags.datadoghq.com/source"  = "envoy"
-          "tags.datadoghq.com/version" = var.istio_version
+          "topology.istio.io/network" = local.istio_network
         }
       }
 
@@ -361,9 +364,9 @@ resource "kubernetes_manifest" "istio_gateway" {
       gatewayClassName = "istio"
 
       # istiod provisions the data plane Deployment/Service (named gateway-istio) from this
-      # Gateway. Datadog labels and the GKE Service annotations are copied onto the generated
-      # resources via infrastructure; the parametersRef ConfigMap carries the strategic-merge
-      # patches for the Service (NodePort), Deployment, HPA, and PodDisruptionBudget.
+      # Gateway. The GKE Service annotations are copied onto the generated resources via
+      # infrastructure; the parametersRef ConfigMap carries the strategic-merge patches for
+      # the Service (NodePort), Deployment, HPA, and PodDisruptionBudget.
 
       infrastructure = {
         annotations = {
@@ -374,13 +377,6 @@ resource "kubernetes_manifest" "istio_gateway" {
           # Suppress IST0170: The MCS only exports port 443 (not status-port 15021) by design,
           # so Istio sees inconsistent ports across clusters. This is expected.
           "galley.istio.io/analyze-suppress" = "IST0170"
-        }
-
-        labels = {
-          "tags.datadoghq.com/env"     = module.core_helpers.environment
-          "tags.datadoghq.com/service" = "istio-gateway"
-          "tags.datadoghq.com/source"  = "envoy"
-          "tags.datadoghq.com/version" = var.istio_version
         }
 
         parametersRef = {

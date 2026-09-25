@@ -112,7 +112,10 @@ resource "helm_release" "ztunnel" {
   values = [
     yamlencode({
       global = {
-        hub = "${var.artifact_registry}/istio"
+        # Matches istiod's global.caAddress (regional/helm/istiod.yml) so ztunnel requests
+        # workload certificates from cert-manager-istio-csr instead of istiod's disabled CA server.
+        caAddress = "cert-manager-istio-csr.cert-manager.svc:443"
+        hub       = "${var.artifact_registry}/istio"
       }
 
       meshConfig = {

@@ -323,8 +323,10 @@ resource "kubernetes_manifest" "istio_east_west_gateway" {
       gatewayClassName = "istio-east-west"
 
       # Keeps the auto-provisioned Service/Deployment off the public internet — cross-cluster
-      # mesh traffic stays within the Shared VPC. The annotation only affects the Service; it's
-      # harmless on the Deployment.
+      # mesh traffic stays within the Shared VPC. GCP internal passthrough load balancers are
+      # regional, so allow-global-access is required for ztunnels/gateways in other regions to
+      # reach this gateway's LB IP (e.g. us-east1 clusters dialing a us-east4 east-west
+      # gateway). The annotations only affect the Service; they're harmless on the Deployment.
       #
       # topology.istio.io/network must be repeated here: when infrastructure.labels is set,
       # Istio's gateway deployment controller uses it exclusively for the generated Service and
@@ -333,7 +335,8 @@ resource "kubernetes_manifest" "istio_east_west_gateway" {
       # gateway as a network gateway for cross-cluster HBONE routing.
       infrastructure = {
         annotations = {
-          "networking.gke.io/load-balancer-type" = "Internal"
+          "networking.gke.io/internal-load-balancer-allow-global-access" = "true"
+          "networking.gke.io/load-balancer-type"                         = "Internal"
         }
 
         labels = {

@@ -104,6 +104,18 @@ variable "labels" {
   default     = {}
 }
 
+variable "mesh_config_extension_providers" {
+  description = "Istio meshConfig extensionProviders entries (e.g. envoyExtAuthzHttp providers) merged into istiod's Helm values, keeping the mesh config fully rendered by Helm instead of patched out-of-band"
+  type        = any
+  default     = []
+}
+
+variable "mesh_config_service_settings" {
+  description = "Istio meshConfig serviceSettings entries (e.g. clusterLocal service scoping) merged into istiod's Helm values, keeping the mesh config fully rendered by Helm instead of patched out-of-band"
+  type        = any
+  default     = []
+}
+
 variable "multi_cluster_service_clusters" {
   description = "List of clusters to be included in the MultiClusterService"
   type = list(object({

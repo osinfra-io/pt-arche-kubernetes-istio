@@ -207,27 +207,38 @@ locals {
       }
     }
 
-    # Marks Services labeled istio.io/global: "true" as GLOBAL scope. Ambient's remote-cluster
-    # service discovery defaults every Service to LOCAL scope and drops it entirely from
-    # cross-cluster EDS unless it matches a GLOBAL serviceScopeConfigs rule here — the
+    # All mesh config is rendered by Helm here — never patched onto the istio ConfigMap
+    # out-of-band, which would silently drop every other rendered key.
+    #
+    # serviceScopeConfigs marks Services labeled istio.io/global: "true" as GLOBAL scope.
+    # Ambient's remote-cluster service discovery defaults every Service to LOCAL scope and
+    # drops it entirely from cross-cluster EDS unless it matches a GLOBAL rule here — the
     # istio.io/global label alone (see README) has no effect without this matching rule.
-    meshConfig = var.enable_ambient ? {
-      serviceScopeConfigs = [
-        {
-          scope = "GLOBAL"
+    meshConfig = merge(
+      length(var.mesh_config_extension_providers) > 0 ? {
+        extensionProviders = var.mesh_config_extension_providers
+      } : {},
+      var.enable_ambient ? {
+        serviceScopeConfigs = [
+          {
+            scope = "GLOBAL"
 
-          servicesSelector = {
-            matchExpressions = [
-              {
-                key      = "istio.io/global"
-                operator = "In"
-                values   = ["true"]
-              }
-            ]
+            servicesSelector = {
+              matchExpressions = [
+                {
+                  key      = "istio.io/global"
+                  operator = "In"
+                  values   = ["true"]
+                }
+              ]
+            }
           }
-        }
-      ]
-    } : {}
+        ]
+      } : {},
+      length(var.mesh_config_service_settings) > 0 ? {
+        serviceSettings = var.mesh_config_service_settings
+      } : {}
+    )
 
     podLabels = {
       "tags.datadoghq.com/env"     = module.core_helpers.environment

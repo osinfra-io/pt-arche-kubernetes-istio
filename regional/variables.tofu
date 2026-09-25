@@ -82,9 +82,9 @@ variable "gateway_memory_requests" {
 }
 
 variable "istio_network" {
-  description = "The logical Istio network name for same-network ambient multicluster traffic"
+  description = "The logical Istio network name for this cluster. Defaults to a name derived from cluster_prefix/region/zone/env so every cluster gets its own network automatically (required for the supported ambient multicluster path); override only if a shared network name is intentionally needed"
   type        = string
-  default     = "standard-shared"
+  default     = null
 }
 
 variable "istio_version" {

@@ -168,6 +168,30 @@ locals {
 
   istio_gateway_name = "istio-gateway-${module.core_helpers.region}-${module.core_helpers.zone}"
 
+  # East-west gateway listener. HBONE-only, double-HBONE terminate, per the ambient
+  # multicluster install guide — this is the only supported ambient east-west shape.
+  istio_east_west_gateway_listeners = [
+    {
+      name     = "mesh"
+      port     = 15008
+      protocol = "HBONE"
+
+      tls = {
+        mode = "Terminate"
+
+        options = {
+          "gateway.istio.io/tls-terminate-mode" = "ISTIO_MUTUAL"
+        }
+      }
+    }
+  ]
+
+  # Every cluster gets its own logical Istio network by default, derived from cluster
+  # identity, so cross-cluster ambient traffic always takes the supported multi-network +
+  # east-west-gateway path (upstream documents same-network ambient multicluster as
+  # untested/may be broken) — this requires no per-team configuration to onboard correctly.
+  istio_network = coalesce(var.istio_network, local.multi_cluster_name)
+
   istiod_helm_values = {
     autoscaleMin = var.pilot_autoscale_min
 
@@ -176,6 +200,14 @@ locals {
       "tags.datadoghq.com/version" = var.istio_version
     }
 
+    # Pilot env vars required for ambient multicluster on separate logical networks
+    # (see istio_network below and the east-west gateway in main.tofu). Only relevant when
+    # ambient is enabled; both default to false upstream so they're omitted otherwise.
+    env = var.enable_ambient ? {
+      AMBIENT_ENABLE_BAGGAGE       = "true"
+      AMBIENT_ENABLE_MULTI_NETWORK = "true"
+    } : {}
+
     global = {
       hub = "${var.artifact_registry}/istio"
 
@@ -183,7 +215,7 @@ locals {
         clusterName = local.multi_cluster_name
       }
 
-      network = var.istio_network
+      network = local.istio_network
 
       proxy = {
         resources = {

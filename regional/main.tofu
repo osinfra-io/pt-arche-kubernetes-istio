@@ -131,7 +131,7 @@ resource "helm_release" "ztunnel" {
         clusterName = local.multi_cluster_name
       }
 
-      network = var.istio_network
+      network = local.istio_network
 
       podLabels = {
         "tags.datadoghq.com/env"     = module.core_helpers.environment
@@ -270,8 +270,78 @@ resource "kubernetes_ingress_v1" "istio_gateway" {
   wait_for_load_balancer = true
 }
 
+# Kubernetes Labels Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/labels
+
+resource "kubernetes_labels" "istio_system_network" {
+  depends_on = [
+    helm_release.base
+  ]
+
+  lifecycle {
+    enabled = var.enable_ambient
+  }
+
+  api_version = "v1"
+  kind        = "Namespace"
+
+  metadata {
+    name = "istio-system"
+  }
+
+  labels = {
+    "topology.istio.io/network" = local.istio_network
+  }
+}
+
 # Kubernetes Manifest Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
+resource "kubernetes_manifest" "istio_east_west_gateway" {
+  depends_on = [
+    helm_release.istiod
+  ]
+
+  lifecycle {
+    enabled = var.enable_ambient
+  }
+
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "Gateway"
+
+    metadata = {
+      name      = "istio-eastwestgateway"
+      namespace = "istio-system"
+
+      labels = {
+        "topology.istio.io/network" = local.istio_network
+      }
+    }
+
+    spec = {
+      gatewayClassName = "istio-east-west"
+
+      # Keeps the auto-provisioned Service/Deployment off the public internet — cross-cluster
+      # mesh traffic stays within the Shared VPC. The annotation only affects the Service; it's
+      # harmless on the Deployment.
+      infrastructure = {
+        annotations = {
+          "networking.gke.io/load-balancer-type" = "Internal"
+        }
+
+        labels = {
+          "tags.datadoghq.com/env"     = module.core_helpers.environment
+          "tags.datadoghq.com/service" = "istio-eastwestgateway"
+          "tags.datadoghq.com/source"  = "envoy"
+          "tags.datadoghq.com/version" = var.istio_version
+        }
+      }
+
+      listeners = local.istio_east_west_gateway_listeners
+    }
+  }
+}
 
 resource "kubernetes_manifest" "istio_gateway" {
   lifecycle {

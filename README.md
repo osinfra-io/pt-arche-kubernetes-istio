@@ -6,6 +6,8 @@
 
 OpenTofu **example** module that deploys the Istio service mesh on GKE in ambient mode, using the official Helm charts for the ambient data plane (`istio-cni` and `ztunnel`) with `istiod` as the control plane. It optionally provisions a Kubernetes Gateway API ingress gateway — the `Gateway` resource is reconciled by istiod, which auto-provisions the `gateway-istio` data plane — backed by a global static IP, Cloud Armor WAF/DDoS protection with adaptive rate limiting, and an SSL policy for TLS termination. Routing is expressed with `HTTPRoute` resources. Multi-cluster ingress (MCI) and multi-cluster service (MCS) resources are supported for cross-cluster traffic, and cert-manager integration is included for mTLS via an intermediate CA.
 
+When ambient is enabled (the default), every cluster is assigned its own logical Istio network (`local.istio_network`, derived automatically from `cluster_prefix`/region/zone/environment unless `istio_network` is explicitly overridden) and gets a dedicated ambient east-west `Gateway` (`gatewayClassName: istio-east-west`, HBONE-only on port `15008`, internal GKE load balancer). This follows [upstream Istio's supported ambient multicluster path](https://istio.io/latest/docs/ambient/install/multicluster/) — same-network ambient multicluster is documented as untested and may be broken — and requires no per-team configuration: newly onboarded teams and clusters get a working east-west gateway automatically. Services that should be reachable from other clusters must be labeled `istio.io/global: "true"` in the consuming repo.
+
 ## 🔩 Usage
 
 > [!TIP]

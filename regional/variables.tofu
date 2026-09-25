@@ -213,7 +213,9 @@ variable "ztunnel_memory_requests" {
 }
 
 variable "ztunnel_version" {
+  # Temporarily pinned to the 1.31.0-rc.0 chart alongside istio_version; see
+  # the comment on that variable for why the GA chart isn't available yet.
   description = "The ztunnel chart version to install"
   type        = string
-  default     = "1.30.5"
+  default     = "1.31.0-rc.0"
 }

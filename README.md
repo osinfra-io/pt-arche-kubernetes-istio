@@ -4,11 +4,21 @@
 
 ## Repository Description
 
-OpenTofu **example** module that deploys the Istio service mesh on GKE in ambient mode, using the official Helm charts for the ambient data plane (`istio-cni` and `ztunnel`) with `istiod` as the control plane. It optionally provisions a Kubernetes Gateway API ingress gateway — the `Gateway` resource is reconciled by istiod, which auto-provisions the `gateway-istio` data plane — backed by a global static IP, Cloud Armor WAF/DDoS protection with adaptive rate limiting, and an SSL policy for TLS termination. Routing is expressed with `HTTPRoute` resources. Multi-cluster ingress (MCI) and multi-cluster service (MCS) resources are supported for cross-cluster traffic, and cert-manager integration is included for mTLS via an intermediate CA.
+Reusable OpenTofu child module that deploys the Istio service mesh on GKE in ambient mode, using the official Helm charts for the ambient data plane (`istio-cni` and `ztunnel`) with `istiod` as the control plane. It optionally provisions a Kubernetes Gateway API ingress gateway — the `Gateway` resource is reconciled by istiod, which auto-provisions the `gateway-istio` data plane — backed by a global static IP, Cloud Armor WAF/DDoS protection with adaptive rate limiting, and an SSL policy for TLS termination. Routing is expressed with `HTTPRoute` resources. Multi-cluster ingress (MCI) and multi-cluster service (MCS) resources are supported for cross-cluster traffic, and cert-manager integration is included for mTLS via an intermediate CA.
 
 Every cluster is assigned its own logical Istio network (derived from `cluster_prefix`/region/zone/environment) and gets a dedicated ambient east-west `Gateway` (`gatewayClassName: istio-east-west`, HBONE-only on port `15008`, internal GKE load balancer). This follows [upstream Istio's supported ambient multicluster path](https://istio.io/latest/docs/ambient/install/multicluster/) — same-network ambient multicluster is documented as untested and may be broken — and requires no per-team configuration: newly onboarded teams and clusters get a working east-west gateway automatically. Services that should be reachable from other clusters must be labeled `istio.io/global: "true"` in the consuming repo.
 
 ## 🔩 Usage
+
+### Module interfaces
+
+| Source path | Purpose | Interface |
+| --- | --- | --- |
+| Repository root | Creates fleet-level ingress IP, managed certificate, DNS, Cloud Armor policy, and TLS policy when this project owns multi-cluster ingress. | [`variables.tofu`](variables.tofu) · [`outputs.tofu`](outputs.tofu) |
+| `//regional` | Deploys ambient Istio, CNI, ztunnel, per-cluster east-west gateway, and optional ingress/MCI/MCS resources. | [`regional/variables.tofu`](regional/variables.tofu) · [`regional/outputs.tofu`](regional/outputs.tofu) |
+| `//regional/manifests` | Creates mesh security policy, destination rules, and `HTTPRoute` resources for application routes and optional regional failover. | [`regional/manifests/variables.tofu`](regional/manifests/variables.tofu) |
+
+The regional module always deploys the ambient control/data plane and an internal HBONE east-west gateway; public ingress is disabled unless `enable_istio_gateway` is true. It requires the shared cert-manager root certificate and private key, which are written to a Kubernetes Secret and must be protected in state and at rest. The current Istio chart default is a release candidate because the corresponding GA charts were not published in the configured chart repository. The root Cloud Armor policy blocks preconfigured WAF matches, rate-limits all traffic at 500 requests per minute, and defaults unmatched traffic to allow; test explicit allow rules and WAF exclusions carefully. Gateways, global addresses, Cloud Armor, managed certificates, DNS, and cross-region traffic can incur GCP costs.
 
 > [!TIP]
 > You can check the [tests/fixtures](tests/fixtures) directory for example configurations. These fixtures set up the system for testing by providing all the necessary initial code, thus creating good examples on which to base your configurations.

@@ -114,6 +114,12 @@ variable "multi_cluster_service_clusters" {
   default = []
 }
 
+variable "pilot_autoscale_max" {
+  description = "The maximum number of Istio pilot replicas to run"
+  type        = number
+  default     = 5
+}
+
 variable "pilot_autoscale_min" {
   description = "The minimum number of Istio pilot replicas to run"
   type        = number

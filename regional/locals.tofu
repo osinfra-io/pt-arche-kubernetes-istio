@@ -162,6 +162,7 @@ locals {
   istio_network = local.multi_cluster_name
 
   istiod_helm_values = {
+    autoscaleMax = var.pilot_autoscale_max
     autoscaleMin = var.pilot_autoscale_min
 
     deploymentLabels = {

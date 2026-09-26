@@ -82,6 +82,13 @@ resource "helm_release" "cni" {
       }
 
       profile = "ambient"
+
+      resources = {
+        requests = {
+          cpu    = var.cni_cpu_requests
+          memory = var.cni_memory_requests
+        }
+      }
     })
   ]
 
@@ -186,6 +193,17 @@ resource "kubernetes_cluster_role_v1" "istio_reader_gateway_api" {
 # the resources, autoscaling, disruption budget, tolerations, topology spread, and Datadog pod
 # annotations that were previously set on the Helm gateway release, plus the NodePort Service
 # type required by the GKE NEG/MCS ingress path.
+
+resource "kubernetes_config_map_v1" "istio_east_west_gateway_options" {
+  metadata {
+    name      = "east-west-gateway-options"
+    namespace = "istio-system"
+  }
+
+  data = {
+    deployment = local.istio_east_west_gateway_deployment_patch
+  }
+}
 
 resource "kubernetes_config_map_v1" "istio_gateway_options" {
   lifecycle {
@@ -312,6 +330,15 @@ resource "kubernetes_manifest" "istio_east_west_gateway" {
 
         labels = {
           "topology.istio.io/network" = local.istio_network
+        }
+
+        # Carries the strategic-merge patch that makes the generated Deployment's resource
+        # requests tunable; the chart's defaults are sized for gateways carrying real
+        # cross-cluster traffic.
+        parametersRef = {
+          group = ""
+          kind  = "ConfigMap"
+          name  = kubernetes_config_map_v1.istio_east_west_gateway_options.metadata[0].name
         }
       }
 

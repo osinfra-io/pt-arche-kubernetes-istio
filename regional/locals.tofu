@@ -43,6 +43,35 @@ locals {
     }
   ]
 
+  # Strategic-merge patch for the generated east-west gateway Deployment. istiod names the
+  # gateway container "istio-proxy". The chart's default requests are sized for gateways
+  # carrying real cross-cluster traffic; this makes them tunable per environment.
+  istio_east_west_gateway_deployment_patch = yamlencode({
+    spec = {
+      template = {
+        spec = {
+          containers = [
+            {
+              name = "istio-proxy"
+
+              resources = {
+                limits = {
+                  cpu    = var.east_west_gateway_cpu_limits
+                  memory = var.east_west_gateway_memory_limits
+                }
+
+                requests = {
+                  cpu    = var.east_west_gateway_cpu_requests
+                  memory = var.east_west_gateway_memory_requests
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  })
+
   istio_gateway_address = var.enable_istio_gateway ? google_compute_global_address.istio_gateway.address : null
 
   # Strategic-merge patch for the generated gateway Deployment. istiod names the gateway

@@ -19,6 +19,42 @@ variable "cluster_prefix" {
 }
 
 
+variable "cni_cpu_requests" {
+  description = "The CPU request for the Istio CNI node agent"
+  type        = string
+  default     = "100m"
+}
+
+variable "cni_memory_requests" {
+  description = "The memory request for the Istio CNI node agent"
+  type        = string
+  default     = "100Mi"
+}
+
+variable "east_west_gateway_cpu_limits" {
+  description = "The CPU limit for the Istio east-west gateway"
+  type        = string
+  default     = "2"
+}
+
+variable "east_west_gateway_cpu_requests" {
+  description = "The CPU request for the Istio east-west gateway"
+  type        = string
+  default     = "100m"
+}
+
+variable "east_west_gateway_memory_limits" {
+  description = "The memory limit for the Istio east-west gateway"
+  type        = string
+  default     = "1Gi"
+}
+
+variable "east_west_gateway_memory_requests" {
+  description = "The memory request for the Istio east-west gateway"
+  type        = string
+  default     = "128Mi"
+}
+
 variable "enable_istio_gateway" {
   description = "Enable the Istio gateway, used for ingress traffic into the mesh"
   type        = bool

@@ -2,6 +2,8 @@ autoscaleEnabled: true
 autoscaleMax: 5
 autoscaleMin: 1
 
+profile: ambient
+
 cpu:
   targetAverageUtilization: 85
 
@@ -13,10 +15,11 @@ env:
   ENABLE_CA_SERVER: "false"
   PILOT_ENABLE_IP_AUTOALLOCATE: "true"
 
+# global.network is intentionally omitted here — it's set dynamically per cluster in
+# locals.tofu (local.istio_network) and merged in via the second values file.
 global:
   caAddress: cert-manager-istio-csr.cert-manager.svc:443
   meshID: default
-  network: standard-shared
 
 meshConfig:
   accessLogFile: /dev/stdout

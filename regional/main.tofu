@@ -55,6 +55,85 @@ resource "helm_release" "istiod" {
   version = var.istio_version
 }
 
+resource "helm_release" "cni" {
+  depends_on = [
+    helm_release.istiod
+  ]
+
+  chart      = "cni"
+  name       = "istio-cni"
+  namespace  = "istio-system"
+  repository = var.chart_repository
+
+  values = [
+    yamlencode({
+      global = {
+        hub = "${var.artifact_registry}/istio"
+      }
+
+      # Selects the istio-cni chart's bundled GKE platform profile, which unsets cniBinDir so the
+      # chart autodetects the GKE node's binary path and enables the ResourceQuota required to
+      # admit the CNI and ztunnel system-node-critical pods.
+      platform = "gke"
+
+      podLabels = {
+        "tags.datadoghq.com/env"     = module.core_helpers.environment
+        "tags.datadoghq.com/version" = var.istio_version
+      }
+
+      profile = "ambient"
+    })
+  ]
+
+  version = var.istio_version
+}
+
+resource "helm_release" "ztunnel" {
+  depends_on = [
+    helm_release.cni
+  ]
+
+  chart      = "ztunnel"
+  name       = "ztunnel"
+  namespace  = "istio-system"
+  repository = var.chart_repository
+
+  values = [
+    yamlencode({
+      global = {
+        # Matches istiod's global.caAddress (regional/helm/istiod.yml) so ztunnel requests
+        # workload certificates from cert-manager-istio-csr instead of istiod's disabled CA server.
+        caAddress = "cert-manager-istio-csr.cert-manager.svc:443"
+        hub       = "${var.artifact_registry}/istio"
+        network   = local.istio_network
+      }
+
+      multiCluster = {
+        clusterName = local.multi_cluster_name
+      }
+
+      podLabels = {
+        "tags.datadoghq.com/env"     = module.core_helpers.environment
+        "tags.datadoghq.com/version" = var.istio_version
+      }
+
+      resources = {
+        limits = {
+          cpu    = var.ztunnel_cpu_limits
+          memory = var.ztunnel_memory_limits
+        }
+
+        requests = {
+          cpu    = var.ztunnel_cpu_requests
+          memory = var.ztunnel_memory_requests
+        }
+      }
+    })
+  ]
+
+  version = var.istio_version
+}
+
 # Kubernetes Cluster Role Binding Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/cluster_role_binding_v1
 
@@ -170,8 +249,76 @@ resource "kubernetes_ingress_v1" "istio_gateway" {
   wait_for_load_balancer = true
 }
 
+# Kubernetes Labels Resource
+# https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/labels
+
+resource "kubernetes_labels" "istio_system_network" {
+  depends_on = [
+    helm_release.base
+  ]
+
+  api_version = "v1"
+  kind        = "Namespace"
+
+  metadata {
+    name = "istio-system"
+  }
+
+  labels = {
+    "topology.istio.io/network" = local.istio_network
+  }
+}
+
 # Kubernetes Manifest Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/manifest
+
+resource "kubernetes_manifest" "istio_east_west_gateway" {
+  depends_on = [
+    helm_release.istiod
+  ]
+
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "Gateway"
+
+    metadata = {
+      name      = "istio-eastwestgateway"
+      namespace = "istio-system"
+
+      labels = {
+        "topology.istio.io/network" = local.istio_network
+      }
+    }
+
+    spec = {
+      gatewayClassName = "istio-east-west"
+
+      # Keeps the auto-provisioned Service/Deployment off the public internet — cross-cluster
+      # mesh traffic stays within the Shared VPC. GCP internal passthrough load balancers are
+      # regional, so allow-global-access is required for ztunnels/gateways in other regions to
+      # reach this gateway's LB IP (e.g. us-east1 clusters dialing a us-east4 east-west
+      # gateway). The annotations only affect the Service; they're harmless on the Deployment.
+      #
+      # topology.istio.io/network must be repeated here: when infrastructure.labels is set,
+      # Istio's gateway deployment controller uses it exclusively for the generated Service and
+      # does not merge in the Gateway's own top-level metadata.labels. Without it here, the
+      # auto-provisioned Service never carries the network label, so pilot can't discover this
+      # gateway as a network gateway for cross-cluster HBONE routing.
+      infrastructure = {
+        annotations = {
+          "networking.gke.io/internal-load-balancer-allow-global-access" = "true"
+          "networking.gke.io/load-balancer-type"                         = "Internal"
+        }
+
+        labels = {
+          "topology.istio.io/network" = local.istio_network
+        }
+      }
+
+      listeners = local.istio_east_west_gateway_listeners
+    }
+  }
+}
 
 resource "kubernetes_manifest" "istio_gateway" {
   lifecycle {
@@ -191,9 +338,9 @@ resource "kubernetes_manifest" "istio_gateway" {
       gatewayClassName = "istio"
 
       # istiod provisions the data plane Deployment/Service (named gateway-istio) from this
-      # Gateway. Datadog labels and the GKE Service annotations are copied onto the generated
-      # resources via infrastructure; the parametersRef ConfigMap carries the strategic-merge
-      # patches for the Service (NodePort), Deployment, HPA, and PodDisruptionBudget.
+      # Gateway. The GKE Service annotations are copied onto the generated resources via
+      # infrastructure; the parametersRef ConfigMap carries the strategic-merge patches for
+      # the Service (NodePort), Deployment, HPA, and PodDisruptionBudget.
 
       infrastructure = {
         annotations = {
@@ -204,13 +351,6 @@ resource "kubernetes_manifest" "istio_gateway" {
           # Suppress IST0170: The MCS only exports port 443 (not status-port 15021) by design,
           # so Istio sees inconsistent ports across clusters. This is expected.
           "galley.istio.io/analyze-suppress" = "IST0170"
-        }
-
-        labels = {
-          "tags.datadoghq.com/env"     = module.core_helpers.environment
-          "tags.datadoghq.com/service" = "istio-gateway"
-          "tags.datadoghq.com/source"  = "envoy"
-          "tags.datadoghq.com/version" = var.istio_version
         }
 
         parametersRef = {

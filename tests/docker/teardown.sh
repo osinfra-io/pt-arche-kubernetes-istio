@@ -3,7 +3,7 @@
 set -euo pipefail
 
 readonly GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.4.0}"
-readonly ISTIO_VERSION="${ISTIO_VERSION:-1.30.3}"
+readonly ISTIO_VERSION="${ISTIO_VERSION:-1.31.0}"
 
 if [ "$(kubectl config current-context)" != "docker-desktop" ]; then
   echo "kubectl must use the docker-desktop context" >&2

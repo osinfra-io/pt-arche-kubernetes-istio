@@ -46,41 +46,11 @@ locals {
   istio_gateway_address = var.enable_istio_gateway ? google_compute_global_address.istio_gateway.address : null
 
   # Strategic-merge patch for the generated gateway Deployment. istiod names the gateway
-  # container "istio-proxy". Ports the resources, tolerations, topology spread, and Datadog
-  # pod annotations (autodiscovery, APM env, and Istio proxy tracing config) that were set on
-  # the Helm gateway release.
+  # container "istio-proxy". Ports the resources, tolerations, and topology spread that were
+  # set on the Helm gateway release.
   istio_gateway_deployment_patch = yamlencode({
     spec = {
       template = {
-        metadata = {
-          annotations = {
-            "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
-            "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
-            "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15020/stats/prometheus\"\n  }\n]\n"
-            "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"envoy\"}]"
-
-            "apm.datadoghq.com/env" = jsonencode({
-              DD_ENV     = module.core_helpers.environment
-              DD_SERVICE = "istio-gateway"
-              DD_VERSION = var.istio_version
-            })
-
-            "proxy.istio.io/config" = yamlencode({
-              proxyMetadata = {
-                DD_ENV     = module.core_helpers.environment
-                DD_SERVICE = "istio-gateway"
-                DD_VERSION = var.istio_version
-              }
-
-              tracing = {
-                datadog = {
-                  address = "$(HOST_IP):8126"
-                }
-              }
-            })
-          }
-        }
-
         spec = {
           containers = [
             {
@@ -168,6 +138,29 @@ locals {
 
   istio_gateway_name = "istio-gateway-${module.core_helpers.region}-${module.core_helpers.zone}"
 
+  # East-west gateway listener. HBONE-only, double-HBONE terminate, per the ambient
+  # multicluster install guide — this is the only supported ambient east-west shape.
+  istio_east_west_gateway_listeners = [
+    {
+      name     = "mesh"
+      port     = 15008
+      protocol = "HBONE"
+
+      tls = {
+        mode = "Terminate"
+
+        options = {
+          "gateway.istio.io/tls-terminate-mode" = "ISTIO_MUTUAL"
+        }
+      }
+    }
+  ]
+
+  # Every cluster is its own logical Istio network so cross-cluster ambient traffic takes the
+  # supported multi-network east-west gateway path (same-network ambient multicluster is
+  # untested upstream).
+  istio_network = local.multi_cluster_name
+
   istiod_helm_values = {
     autoscaleMin = var.pilot_autoscale_min
 
@@ -176,12 +169,23 @@ locals {
       "tags.datadoghq.com/version" = var.istio_version
     }
 
+    # Ambient multi-network multicluster flags per the upstream install guide.
+    # AMBIENT_ENABLE_MULTI_NETWORK_INGRESS lets ingress Gateway proxies route to endpoints in
+    # remote networks via their east-west gateways.
+    env = {
+      AMBIENT_ENABLE_BAGGAGE               = "true"
+      AMBIENT_ENABLE_MULTI_NETWORK         = "true"
+      AMBIENT_ENABLE_MULTI_NETWORK_INGRESS = "true"
+    }
+
     global = {
       hub = "${var.artifact_registry}/istio"
 
       multiCluster = {
         clusterName = local.multi_cluster_name
       }
+
+      network = local.istio_network
 
       proxy = {
         resources = {
@@ -196,6 +200,13 @@ locals {
           }
         }
       }
+    }
+
+    # All mesh config is rendered by Helm — never patch the istio ConfigMap out-of-band, which
+    # drops every other rendered key (including the ambient profile's serviceScopeConfigs).
+    meshConfig = {
+      extensionProviders = var.mesh_config_extension_providers
+      serviceSettings    = var.mesh_config_service_settings
     }
 
     podLabels = {

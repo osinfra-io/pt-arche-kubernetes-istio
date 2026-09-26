@@ -18,6 +18,7 @@ variable "cluster_prefix" {
   type        = string
 }
 
+
 variable "enable_istio_gateway" {
   description = "Enable the Istio gateway, used for ingress traffic into the mesh"
   type        = bool
@@ -75,16 +76,34 @@ variable "gateway_memory_requests" {
   default     = "32Mi"
 }
 
+
 variable "istio_version" {
+  # Temporarily pinned to the 1.31.0-rc.0 chart: the 1.31.0/1.31.1 GA charts
+  # were never published to the istio-release Helm chart bucket (only
+  # pre-release rc/beta/alpha charts exist there), even though the GitHub
+  # binary release and docs for 1.31.1 are live. Re-pin to the GA version
+  # once the chart publish gap is resolved upstream.
   description = "The version to install, this is used for the chart as well as the image tag"
   type        = string
-  default     = "1.31.0"
+  default     = "1.31.0-rc.0"
 }
 
 variable "labels" {
   description = "A map of key/value pairs to assign to the resources being created"
   type        = map(string)
   default     = {}
+}
+
+variable "mesh_config_extension_providers" {
+  description = "Istio meshConfig extensionProviders entries (e.g. envoyExtAuthzHttp providers) merged into istiod's Helm values, keeping the mesh config fully rendered by Helm instead of patched out-of-band"
+  type        = any
+  default     = []
+}
+
+variable "mesh_config_service_settings" {
+  description = "Istio meshConfig serviceSettings entries (e.g. clusterLocal service scoping) merged into istiod's Helm values, keeping the mesh config fully rendered by Helm instead of patched out-of-band"
+  type        = any
+  default     = []
 }
 
 variable "multi_cluster_service_clusters" {
@@ -169,4 +188,28 @@ variable "tls_self_signed_cert_cert_manager_root_key" {
   description = "The private key for the cert-manager root certificate"
   type        = string
   sensitive   = true
+}
+
+variable "ztunnel_cpu_limits" {
+  description = "The CPU limit for ztunnel"
+  type        = string
+  default     = "500m"
+}
+
+variable "ztunnel_cpu_requests" {
+  description = "The CPU request for ztunnel"
+  type        = string
+  default     = "250m"
+}
+
+variable "ztunnel_memory_limits" {
+  description = "The memory limit for ztunnel"
+  type        = string
+  default     = "512Mi"
+}
+
+variable "ztunnel_memory_requests" {
+  description = "The memory request for ztunnel"
+  type        = string
+  default     = "256Mi"
 }

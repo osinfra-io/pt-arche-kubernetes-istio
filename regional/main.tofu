@@ -78,6 +78,8 @@ resource "helm_release" "cni" {
 
       podLabels = {
         "tags.datadoghq.com/env"     = module.core_helpers.environment
+        "tags.datadoghq.com/service" = "istio-cni"
+        "tags.datadoghq.com/source"  = "istio"
         "tags.datadoghq.com/version" = var.istio_version
       }
 
@@ -116,6 +118,8 @@ resource "helm_release" "ztunnel" {
 
       podLabels = {
         "tags.datadoghq.com/env"     = module.core_helpers.environment
+        "tags.datadoghq.com/service" = "istio-ztunnel"
+        "tags.datadoghq.com/source"  = "istio"
         "tags.datadoghq.com/version" = var.istio_version
       }
 
@@ -324,7 +328,11 @@ resource "kubernetes_manifest" "istio_east_west_gateway" {
         }
 
         labels = {
-          "topology.istio.io/network" = local.istio_network
+          "tags.datadoghq.com/env"     = module.core_helpers.environment
+          "tags.datadoghq.com/service" = "istio-eastwestgateway"
+          "tags.datadoghq.com/source"  = "envoy"
+          "tags.datadoghq.com/version" = var.istio_version
+          "topology.istio.io/network"  = local.istio_network
         }
 
         # Carries the strategic-merge patch that makes the generated Deployment's resource
@@ -360,9 +368,9 @@ resource "kubernetes_manifest" "istio_gateway" {
       gatewayClassName = "istio"
 
       # istiod provisions the data plane Deployment/Service (named gateway-istio) from this
-      # Gateway. The GKE Service annotations are copied onto the generated resources via
-      # infrastructure; the parametersRef ConfigMap carries the strategic-merge patches for
-      # the Service (NodePort), Deployment, HPA, and PodDisruptionBudget.
+      # Gateway. Datadog labels and the GKE Service annotations are copied onto the generated
+      # resources via infrastructure; the parametersRef ConfigMap carries the strategic-merge
+      # patches for the Service (NodePort), Deployment, HPA, and PodDisruptionBudget.
 
       infrastructure = {
         annotations = {
@@ -373,6 +381,13 @@ resource "kubernetes_manifest" "istio_gateway" {
           # Suppress IST0170: The MCS only exports port 443 (not status-port 15021) by design,
           # so Istio sees inconsistent ports across clusters. This is expected.
           "galley.istio.io/analyze-suppress" = "IST0170"
+        }
+
+        labels = {
+          "tags.datadoghq.com/env"     = module.core_helpers.environment
+          "tags.datadoghq.com/service" = "istio-gateway"
+          "tags.datadoghq.com/source"  = "envoy"
+          "tags.datadoghq.com/version" = var.istio_version
         }
 
         parametersRef = {

@@ -65,10 +65,27 @@ locals {
 
   # Strategic-merge patch for the generated east-west gateway Deployment. istiod names the
   # gateway container "istio-proxy". The chart's default requests are sized for gateways
-  # carrying real cross-cluster traffic; this makes them tunable per environment.
+  # carrying real cross-cluster traffic; this makes them tunable per environment. Also carries
+  # the Datadog autodiscovery annotations so the proxy is identified as istio-eastwestgateway
+  # rather than by its proxyv2 image name.
   istio_east_west_gateway_deployment_patch = yamlencode({
     spec = {
       template = {
+        metadata = {
+          annotations = {
+            "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
+            "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
+            "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15020/stats/prometheus\"\n  }\n]\n"
+            "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"envoy\"}]"
+
+            "apm.datadoghq.com/env" = jsonencode({
+              DD_ENV     = module.core_helpers.environment
+              DD_SERVICE = "istio-eastwestgateway"
+              DD_VERSION = var.istio_version
+            })
+          }
+        }
+
         spec = {
           containers = [
             {
@@ -95,11 +112,41 @@ locals {
   istio_gateway_address = var.enable_istio_gateway ? google_compute_global_address.istio_gateway.address : null
 
   # Strategic-merge patch for the generated gateway Deployment. istiod names the gateway
-  # container "istio-proxy". Ports the resources, tolerations, and topology spread that were
-  # set on the Helm gateway release.
+  # container "istio-proxy". Ports the resources, tolerations, topology spread, and Datadog
+  # pod annotations (autodiscovery, APM env, and Istio proxy tracing config) that were set on
+  # the Helm gateway release.
   istio_gateway_deployment_patch = yamlencode({
     spec = {
       template = {
+        metadata = {
+          annotations = {
+            "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
+            "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
+            "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15020/stats/prometheus\"\n  }\n]\n"
+            "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"envoy\"}]"
+
+            "apm.datadoghq.com/env" = jsonencode({
+              DD_ENV     = module.core_helpers.environment
+              DD_SERVICE = "istio-gateway"
+              DD_VERSION = var.istio_version
+            })
+
+            "proxy.istio.io/config" = yamlencode({
+              proxyMetadata = {
+                DD_ENV     = module.core_helpers.environment
+                DD_SERVICE = "istio-gateway"
+                DD_VERSION = var.istio_version
+              }
+
+              tracing = {
+                datadog = {
+                  address = "$(HOST_IP):8126"
+                }
+              }
+            })
+          }
+        }
+
         spec = {
           containers = [
             {

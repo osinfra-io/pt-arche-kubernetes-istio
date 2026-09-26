@@ -18,11 +18,6 @@ variable "cluster_prefix" {
   type        = string
 }
 
-variable "enable_ambient" {
-  description = "Enable the ambient mesh components (istio-cni and ztunnel)"
-  type        = bool
-  default     = true
-}
 
 variable "enable_istio_gateway" {
   description = "Enable the Istio gateway, used for ingress traffic into the mesh"
@@ -81,11 +76,6 @@ variable "gateway_memory_requests" {
   default     = "32Mi"
 }
 
-variable "istio_network" {
-  description = "The logical Istio network name for this cluster. Defaults to a name derived from cluster_prefix/region/zone/env so every cluster gets its own network automatically (required for the supported ambient multicluster path); override only if a shared network name is intentionally needed"
-  type        = string
-  default     = null
-}
 
 variable "istio_version" {
   # Temporarily pinned to the 1.31.0-rc.0 chart: the 1.31.0/1.31.1 GA charts
@@ -222,12 +212,4 @@ variable "ztunnel_memory_requests" {
   description = "The memory request for ztunnel"
   type        = string
   default     = "256Mi"
-}
-
-variable "ztunnel_version" {
-  # Temporarily pinned to the 1.31.0-rc.0 chart alongside istio_version; see
-  # the comment on that variable for why the GA chart isn't available yet.
-  description = "The ztunnel chart version to install"
-  type        = string
-  default     = "1.31.0-rc.0"
 }

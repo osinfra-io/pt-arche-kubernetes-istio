@@ -60,10 +60,6 @@ resource "helm_release" "cni" {
     helm_release.istiod
   ]
 
-  lifecycle {
-    enabled = var.enable_ambient
-  }
-
   chart      = "cni"
   name       = "istio-cni"
   namespace  = "istio-system"
@@ -71,11 +67,6 @@ resource "helm_release" "cni" {
 
   values = [
     yamlencode({
-      ambient = {
-        dnsCapture = true
-        enabled    = true
-      }
-
       global = {
         hub = "${var.artifact_registry}/istio"
       }
@@ -89,6 +80,8 @@ resource "helm_release" "cni" {
         "tags.datadoghq.com/env"     = module.core_helpers.environment
         "tags.datadoghq.com/version" = var.istio_version
       }
+
+      profile = "ambient"
     })
   ]
 
@@ -99,10 +92,6 @@ resource "helm_release" "ztunnel" {
   depends_on = [
     helm_release.cni
   ]
-
-  lifecycle {
-    enabled = var.enable_ambient
-  }
 
   chart      = "ztunnel"
   name       = "ztunnel"
@@ -116,26 +105,16 @@ resource "helm_release" "ztunnel" {
         # workload certificates from cert-manager-istio-csr instead of istiod's disabled CA server.
         caAddress = "cert-manager-istio-csr.cert-manager.svc:443"
         hub       = "${var.artifact_registry}/istio"
-      }
-
-      meshConfig = {
-        defaultConfig = {
-          proxyMetadata = {
-            ISTIO_META_DNS_CAPTURE  = "true"
-            ISTIO_META_ENABLE_HBONE = "true"
-          }
-        }
+        network   = local.istio_network
       }
 
       multiCluster = {
         clusterName = local.multi_cluster_name
       }
 
-      network = local.istio_network
-
       podLabels = {
         "tags.datadoghq.com/env"     = module.core_helpers.environment
-        "tags.datadoghq.com/version" = var.ztunnel_version
+        "tags.datadoghq.com/version" = var.istio_version
       }
 
       resources = {
@@ -152,7 +131,7 @@ resource "helm_release" "ztunnel" {
     })
   ]
 
-  version = var.ztunnel_version
+  version = var.istio_version
 }
 
 # Kubernetes Cluster Role Binding Resource
@@ -278,10 +257,6 @@ resource "kubernetes_labels" "istio_system_network" {
     helm_release.base
   ]
 
-  lifecycle {
-    enabled = var.enable_ambient
-  }
-
   api_version = "v1"
   kind        = "Namespace"
 
@@ -301,10 +276,6 @@ resource "kubernetes_manifest" "istio_east_west_gateway" {
   depends_on = [
     helm_release.istiod
   ]
-
-  lifecycle {
-    enabled = var.enable_ambient
-  }
 
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1"

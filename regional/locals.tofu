@@ -156,11 +156,10 @@ locals {
     }
   ]
 
-  # Every cluster gets its own logical Istio network by default, derived from cluster
-  # identity, so cross-cluster ambient traffic always takes the supported multi-network +
-  # east-west-gateway path (upstream documents same-network ambient multicluster as
-  # untested/may be broken) — this requires no per-team configuration to onboard correctly.
-  istio_network = coalesce(var.istio_network, local.multi_cluster_name)
+  # Every cluster is its own logical Istio network so cross-cluster ambient traffic takes the
+  # supported multi-network east-west gateway path (same-network ambient multicluster is
+  # untested upstream).
+  istio_network = local.multi_cluster_name
 
   istiod_helm_values = {
     autoscaleMin = var.pilot_autoscale_min
@@ -170,18 +169,14 @@ locals {
       "tags.datadoghq.com/version" = var.istio_version
     }
 
-    # Pilot env vars required for ambient multicluster on separate logical networks
-    # (see istio_network below and the east-west gateway in main.tofu).
-    # AMBIENT_ENABLE_MULTI_NETWORK_INGRESS extends the multi-network EDS/gateway-selection
-    # path (governed by AMBIENT_ENABLE_MULTI_NETWORK) to the ingress `Gateway` proxies
-    # themselves, without which cross-cluster endpoints are silently filtered out of the
-    # ingress gateway's EDS view. Only relevant when ambient is enabled; all default to
-    # false upstream so they're omitted otherwise.
-    env = var.enable_ambient ? {
+    # Ambient multi-network multicluster flags per the upstream install guide.
+    # AMBIENT_ENABLE_MULTI_NETWORK_INGRESS lets ingress Gateway proxies route to endpoints in
+    # remote networks via their east-west gateways.
+    env = {
       AMBIENT_ENABLE_BAGGAGE               = "true"
       AMBIENT_ENABLE_MULTI_NETWORK         = "true"
       AMBIENT_ENABLE_MULTI_NETWORK_INGRESS = "true"
-    } : {}
+    }
 
     global = {
       hub = "${var.artifact_registry}/istio"
@@ -207,38 +202,12 @@ locals {
       }
     }
 
-    # All mesh config is rendered by Helm here — never patched onto the istio ConfigMap
-    # out-of-band, which would silently drop every other rendered key.
-    #
-    # serviceScopeConfigs marks Services labeled istio.io/global: "true" as GLOBAL scope.
-    # Ambient's remote-cluster service discovery defaults every Service to LOCAL scope and
-    # drops it entirely from cross-cluster EDS unless it matches a GLOBAL rule here — the
-    # istio.io/global label alone (see README) has no effect without this matching rule.
-    meshConfig = merge(
-      length(var.mesh_config_extension_providers) > 0 ? {
-        extensionProviders = var.mesh_config_extension_providers
-      } : {},
-      var.enable_ambient ? {
-        serviceScopeConfigs = [
-          {
-            scope = "GLOBAL"
-
-            servicesSelector = {
-              matchExpressions = [
-                {
-                  key      = "istio.io/global"
-                  operator = "In"
-                  values   = ["true"]
-                }
-              ]
-            }
-          }
-        ]
-      } : {},
-      length(var.mesh_config_service_settings) > 0 ? {
-        serviceSettings = var.mesh_config_service_settings
-      } : {}
-    )
+    # All mesh config is rendered by Helm — never patch the istio ConfigMap out-of-band, which
+    # drops every other rendered key (including the ambient profile's serviceScopeConfigs).
+    meshConfig = {
+      extensionProviders = var.mesh_config_extension_providers
+      serviceSettings    = var.mesh_config_service_settings
+    }
 
     podLabels = {
       "tags.datadoghq.com/env"     = module.core_helpers.environment

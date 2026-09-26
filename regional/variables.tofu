@@ -18,6 +18,53 @@ variable "cluster_prefix" {
   type        = string
 }
 
+variable "cni_cpu_limits" {
+  description = "The CPU limit for the Istio CNI node agent, unset by default to match the upstream chart which ships requests only"
+  type        = string
+  default     = null
+}
+
+variable "cni_cpu_requests" {
+  description = "The CPU request for the Istio CNI node agent"
+  type        = string
+  default     = "100m"
+}
+
+variable "cni_memory_limits" {
+  description = "The memory limit for the Istio CNI node agent, unset by default to match the upstream chart which ships requests only"
+  type        = string
+  default     = null
+}
+
+variable "cni_memory_requests" {
+  description = "The memory request for the Istio CNI node agent"
+  type        = string
+  default     = "100Mi"
+}
+
+variable "east_west_gateway_cpu_limits" {
+  description = "The CPU limit for the Istio east-west gateway"
+  type        = string
+  default     = "2"
+}
+
+variable "east_west_gateway_cpu_requests" {
+  description = "The CPU request for the Istio east-west gateway"
+  type        = string
+  default     = "100m"
+}
+
+variable "east_west_gateway_memory_limits" {
+  description = "The memory limit for the Istio east-west gateway"
+  type        = string
+  default     = "1Gi"
+}
+
+variable "east_west_gateway_memory_requests" {
+  description = "The memory request for the Istio east-west gateway"
+  type        = string
+  default     = "128Mi"
+}
 
 variable "enable_istio_gateway" {
   description = "Enable the Istio gateway, used for ingress traffic into the mesh"
@@ -112,6 +159,12 @@ variable "multi_cluster_service_clusters" {
     link = string
   }))
   default = []
+}
+
+variable "pilot_autoscale_max" {
+  description = "The maximum number of Istio pilot replicas to run"
+  type        = number
+  default     = 5
 }
 
 variable "pilot_autoscale_min" {

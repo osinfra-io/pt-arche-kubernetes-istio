@@ -43,14 +43,110 @@ locals {
     }
   ]
 
+  # The upstream chart ships CNI requests only, with no limits. The limits key is omitted
+  # entirely unless a limit is set, so the rendered DaemonSet matches the chart's default
+  # rather than carrying an empty limits map.
+  istio_cni_limits = {
+    for k, v in {
+      cpu    = var.cni_cpu_limits
+      memory = var.cni_memory_limits
+    } : k => v if v != null
+  }
+
+  istio_cni_resources = merge(
+    {
+      requests = {
+        cpu    = var.cni_cpu_requests
+        memory = var.cni_memory_requests
+      }
+    },
+    length(local.istio_cni_limits) > 0 ? { limits = local.istio_cni_limits } : {}
+  )
+
+  # Strategic-merge patch for the generated east-west gateway Deployment. istiod names the
+  # gateway container "istio-proxy". The chart's default requests are sized for gateways
+  # carrying real cross-cluster traffic; this makes them tunable per environment. Also carries
+  # the Datadog autodiscovery annotations so the proxy is identified as istio-eastwestgateway
+  # rather than by its proxyv2 image name.
+  istio_east_west_gateway_deployment_patch = yamlencode({
+    spec = {
+      template = {
+        metadata = {
+          annotations = {
+            "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
+            "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
+            "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15020/stats/prometheus\"\n  }\n]\n"
+            "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"envoy\"}]"
+
+            "apm.datadoghq.com/env" = jsonencode({
+              DD_ENV     = module.core_helpers.environment
+              DD_SERVICE = "istio-eastwestgateway"
+              DD_VERSION = var.istio_version
+            })
+          }
+        }
+
+        spec = {
+          containers = [
+            {
+              name = "istio-proxy"
+
+              resources = {
+                limits = {
+                  cpu    = var.east_west_gateway_cpu_limits
+                  memory = var.east_west_gateway_memory_limits
+                }
+
+                requests = {
+                  cpu    = var.east_west_gateway_cpu_requests
+                  memory = var.east_west_gateway_memory_requests
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  })
+
   istio_gateway_address = var.enable_istio_gateway ? google_compute_global_address.istio_gateway.address : null
 
   # Strategic-merge patch for the generated gateway Deployment. istiod names the gateway
-  # container "istio-proxy". Ports the resources, tolerations, and topology spread that were
-  # set on the Helm gateway release.
+  # container "istio-proxy". Ports the resources, tolerations, topology spread, and Datadog
+  # pod annotations (autodiscovery, APM env, and Istio proxy tracing config) that were set on
+  # the Helm gateway release.
   istio_gateway_deployment_patch = yamlencode({
     spec = {
       template = {
+        metadata = {
+          annotations = {
+            "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
+            "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
+            "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15020/stats/prometheus\"\n  }\n]\n"
+            "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"envoy\"}]"
+
+            "apm.datadoghq.com/env" = jsonencode({
+              DD_ENV     = module.core_helpers.environment
+              DD_SERVICE = "istio-gateway"
+              DD_VERSION = var.istio_version
+            })
+
+            "proxy.istio.io/config" = yamlencode({
+              proxyMetadata = {
+                DD_ENV     = module.core_helpers.environment
+                DD_SERVICE = "istio-gateway"
+                DD_VERSION = var.istio_version
+              }
+
+              tracing = {
+                datadog = {
+                  address = "$(HOST_IP):8126"
+                }
+              }
+            })
+          }
+        }
+
         spec = {
           containers = [
             {
@@ -162,6 +258,7 @@ locals {
   istio_network = local.multi_cluster_name
 
   istiod_helm_values = {
+    autoscaleMax = var.pilot_autoscale_max
     autoscaleMin = var.pilot_autoscale_min
 
     deploymentLabels = {

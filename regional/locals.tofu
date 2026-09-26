@@ -43,6 +43,26 @@ locals {
     }
   ]
 
+  # The upstream chart ships CNI requests only, with no limits. The limits key is omitted
+  # entirely unless a limit is set, so the rendered DaemonSet matches the chart's default
+  # rather than carrying an empty limits map.
+  istio_cni_limits = {
+    for k, v in {
+      cpu    = var.cni_cpu_limits
+      memory = var.cni_memory_limits
+    } : k => v if v != null
+  }
+
+  istio_cni_resources = merge(
+    {
+      requests = {
+        cpu    = var.cni_cpu_requests
+        memory = var.cni_memory_requests
+      }
+    },
+    length(local.istio_cni_limits) > 0 ? { limits = local.istio_cni_limits } : {}
+  )
+
   # Strategic-merge patch for the generated east-west gateway Deployment. istiod names the
   # gateway container "istio-proxy". The chart's default requests are sized for gateways
   # carrying real cross-cluster traffic; this makes them tunable per environment.

@@ -83,12 +83,7 @@ resource "helm_release" "cni" {
 
       profile = "ambient"
 
-      resources = {
-        requests = {
-          cpu    = var.cni_cpu_requests
-          memory = var.cni_memory_requests
-        }
-      }
+      resources = local.istio_cni_resources
     })
   ]
 

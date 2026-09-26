@@ -18,11 +18,22 @@ variable "cluster_prefix" {
   type        = string
 }
 
+variable "cni_cpu_limits" {
+  description = "The CPU limit for the Istio CNI node agent, unset by default to match the upstream chart which ships requests only"
+  type        = string
+  default     = null
+}
 
 variable "cni_cpu_requests" {
   description = "The CPU request for the Istio CNI node agent"
   type        = string
   default     = "100m"
+}
+
+variable "cni_memory_limits" {
+  description = "The memory limit for the Istio CNI node agent, unset by default to match the upstream chart which ships requests only"
+  type        = string
+  default     = null
 }
 
 variable "cni_memory_requests" {

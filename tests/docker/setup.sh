@@ -150,7 +150,7 @@ kubectl create namespace istio-ingress --dry-run=client --output=yaml |
   kubectl apply --filename -
 
 openssl req \
-  -addext "subjectAltName=DNS:dev.localhost,DNS:agentgateway.localhost" \
+  -addext "subjectAltName=DNS:authentik.localhost,DNS:dev.localhost,DNS:agentgateway.localhost" \
   -keyout "${temporary_directory}/tls.key" \
   -new \
   -newkey rsa:2048 \
@@ -199,5 +199,8 @@ for app in istio-test metadata-mock; do
     done
   done
 done
+
+curl --fail --insecure --retry 10 --retry-all-errors --retry-delay 3 --silent --show-error \
+  https://authentik.localhost/-/health/live/ >/dev/null
 
 echo "Setup complete. Open https://dev.localhost/istio-test/auth and accept the temporary certificate."

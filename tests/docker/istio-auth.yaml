@@ -24,6 +24,17 @@ items:
             certificateRefs:
               - name: gateway-localhost-tls
             mode: Terminate
+        - allowedRoutes:
+            namespaces:
+              from: All
+          hostname: localhost
+          name: https-localhost
+          port: 443
+          protocol: HTTPS
+          tls:
+            certificateRefs:
+              - name: gateway-localhost-tls
+            mode: Terminate
   - apiVersion: v1
     kind: Namespace
     metadata:
@@ -138,6 +149,44 @@ items:
         - backendRefs:
             - name: authentik-server
               port: 9000
+        # Google only accepts localhost, not .localhost subdomains, as a local
+        # redirect URI. Authentik builds the Google callback from the Host header,
+        # so present the OAuth source paths as localhost.
+        - backendRefs:
+            - name: authentik-server
+              port: 9000
+          filters:
+            - type: URLRewrite
+              urlRewrite:
+                hostname: localhost
+          matches:
+            - path:
+                type: PathPrefix
+                value: /source/oauth/
+  # Return the Google callback to authentik.localhost, where the browser holds
+  # the Authentik session and OAuth state.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: authentik-google-callback
+      namespace: authentik
+    spec:
+      hostnames:
+        - localhost
+      parentRefs:
+        - name: gateway
+          namespace: istio-ingress
+          sectionName: https-localhost
+      rules:
+        - filters:
+            - requestRedirect:
+                hostname: authentik.localhost
+                statusCode: 302
+              type: RequestRedirect
+          matches:
+            - path:
+                type: PathPrefix
+                value: /source/oauth/callback/
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:

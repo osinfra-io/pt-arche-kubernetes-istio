@@ -150,7 +150,7 @@ kubectl create namespace istio-ingress --dry-run=client --output=yaml |
   kubectl apply --filename -
 
 openssl req \
-  -addext "subjectAltName=DNS:authentik.localhost,DNS:dev.localhost,DNS:agentgateway.localhost" \
+  -addext "subjectAltName=DNS:localhost,DNS:authentik.localhost,DNS:dev.localhost,DNS:agentgateway.localhost" \
   -keyout "${temporary_directory}/tls.key" \
   -new \
   -newkey rsa:2048 \
@@ -202,5 +202,20 @@ done
 
 curl --fail --insecure --retry 10 --retry-all-errors --retry-delay 3 --silent --show-error \
   https://authentik.localhost/-/health/live/ >/dev/null
+
+# Google rejects .localhost subdomains, so the Google callback uses localhost and
+# the gateway returns it to authentik.localhost.
+google_login_location="$(curl --insecure --silent --show-error --output /dev/null --write-out '%{redirect_url}' \
+  https://authentik.localhost/source/oauth/login/google/)"
+if [[ -n "${google_login_location}" ]] && ! grep --quiet 'redirect_uri=https%3A%2F%2Flocalhost%2Fsource%2Foauth%2Fcallback%2Fgoogle%2F' <<<"${google_login_location}"; then
+  echo "Google sign-in does not use the https://localhost callback" >&2
+  exit 1
+fi
+callback_location="$(curl --insecure --silent --show-error --output /dev/null --write-out '%{redirect_url}' \
+  'https://localhost/source/oauth/callback/google/?code=check&state=check')"
+if [ "${callback_location}" != "https://authentik.localhost/source/oauth/callback/google/?code=check&state=check" ]; then
+  echo "The localhost Google callback does not redirect to authentik.localhost" >&2
+  exit 1
+fi
 
 echo "Setup complete. Open https://dev.localhost/istio-test/auth and accept the temporary certificate."

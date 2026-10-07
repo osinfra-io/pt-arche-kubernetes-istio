@@ -150,7 +150,7 @@ kubectl create namespace istio-ingress --dry-run=client --output=yaml |
   kubectl apply --filename -
 
 openssl req \
-  -addext "subjectAltName=DNS:dev.localhost" \
+  -addext "subjectAltName=DNS:dev.localhost,DNS:agentgateway.localhost" \
   -keyout "${temporary_directory}/tls.key" \
   -new \
   -newkey rsa:2048 \

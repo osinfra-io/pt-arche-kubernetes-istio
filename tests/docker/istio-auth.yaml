@@ -16,7 +16,7 @@ items:
         - allowedRoutes:
             namespaces:
               from: All
-          hostname: dev.localhost
+          hostname: "*.localhost"
           name: https
           port: 443
           protocol: HTTPS

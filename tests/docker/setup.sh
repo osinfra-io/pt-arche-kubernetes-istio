@@ -48,14 +48,39 @@ if [ "$(kubectl config current-context)" != "docker-desktop" ]; then
   exit 1
 fi
 
-docker build --quiet --tag istio-test:local "${ISTIO_TEST_CONTEXT}"
-docker save istio-test:local |
-  docker exec -i desktop-control-plane ctr --namespace k8s.io images import -
-
-kubectl apply --filename "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
-
 temporary_directory="$(mktemp --directory)"
 trap 'rm -rf "${temporary_directory}"' EXIT
+
+nodes="$(kubectl get nodes --output=jsonpath='{.items[*].metadata.name}')"
+if [ -z "${nodes}" ]; then
+  echo "Docker Desktop has no Kubernetes nodes" >&2
+  exit 1
+fi
+
+for node in ${nodes}; do
+  if [ "$(docker inspect "${node}" --format '{{index .Config.Labels "io.x-k8s.kind.cluster"}}')" != "desktop" ]; then
+    echo "Select the Kind provisioner in Docker Desktop Kubernetes settings; node ${node} is not a Desktop Kind node" >&2
+    exit 1
+  fi
+
+  mount_propagation="$(docker exec "${node}" findmnt --noheadings --target /var/run/netns --output PROPAGATION)"
+  case "${mount_propagation}" in
+    *shared* | *slave*)
+      ;;
+    *)
+      echo "Node ${node}: /var/run/netns requires shared or slave mount propagation for ambient CNI (found ${mount_propagation})" >&2
+      exit 1
+      ;;
+  esac
+done
+
+docker build --quiet --tag istio-test:local "${ISTIO_TEST_CONTEXT}"
+docker save --output "${temporary_directory}/istio-test.tar" istio-test:local
+for node in ${nodes}; do
+  docker exec -i "${node}" ctr --namespace k8s.io images import - <"${temporary_directory}/istio-test.tar"
+done
+
+kubectl apply --filename "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
 
 case "$(uname -m)" in
   aarch64 | arm64)
@@ -102,6 +127,9 @@ readonly ISTIOCTL="${temporary_directory}/istio-${ISTIO_VERSION}/bin/istioctl"
   --set meshConfig.extensionProviders[0].envoyExtAuthzHttp.headersToDownstreamOnAllow[0]=cookie \
   --set meshConfig.extensionProviders[0].envoyExtAuthzHttp.headersToDownstreamOnDeny[0]=content-type \
   --set meshConfig.extensionProviders[0].envoyExtAuthzHttp.headersToDownstreamOnDeny[1]=set-cookie
+
+kubectl rollout status daemonset/istio-cni-node --namespace=istio-system --timeout=180s
+kubectl rollout status daemonset/ztunnel --namespace=istio-system --timeout=180s
 
 authentik_host_ip="$(
   kubectl run authentik-host-lookup \
@@ -150,5 +178,26 @@ kubectl patch deployment istio-test \
 kubectl rollout status deployment/metadata-mock --namespace=istio-test --timeout=120s
 kubectl wait --for=condition=Programmed gateway/gateway --namespace=istio-ingress --timeout=120s
 kubectl rollout status deployment/istio-test --namespace=istio-test --timeout=180s
+
+for app in istio-test metadata-mock; do
+  pods="$(kubectl get pods --namespace=istio-test --selector="app=${app}" --output=jsonpath='{.items[*].metadata.name}')"
+  if [ -z "${pods}" ]; then
+    echo "No pods found for ${app}" >&2
+    exit 1
+  fi
+
+  for pod in ${pods}; do
+    kubectl wait --namespace=istio-test "pod/${pod}" \
+      --for=jsonpath='{.metadata.annotations.ambient\.istio\.io/redirection}'=enabled \
+      --timeout=120s
+    containers="$(kubectl get pod "${pod}" --namespace=istio-test --output=jsonpath='{.spec.containers[*].name} {.spec.initContainers[*].name}')"
+    for container in ${containers}; do
+      if [ "${container}" = "istio-proxy" ]; then
+        echo "Pod ${pod} has an injected istio-proxy; the fixture must be ambient-only" >&2
+        exit 1
+      fi
+    done
+  done
+done
 
 echo "Setup complete. Open https://dev.localhost/istio-test/auth and accept the temporary certificate."

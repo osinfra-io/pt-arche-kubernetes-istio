@@ -48,14 +48,39 @@ if [ "$(kubectl config current-context)" != "docker-desktop" ]; then
   exit 1
 fi
 
-docker build --quiet --tag istio-test:local "${ISTIO_TEST_CONTEXT}"
-docker save istio-test:local |
-  docker exec -i desktop-control-plane ctr --namespace k8s.io images import -
-
-kubectl apply --filename "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
-
 temporary_directory="$(mktemp --directory)"
 trap 'rm -rf "${temporary_directory}"' EXIT
+
+nodes="$(kubectl get nodes --output=jsonpath='{.items[*].metadata.name}')"
+if [ -z "${nodes}" ]; then
+  echo "Docker Desktop has no Kubernetes nodes" >&2
+  exit 1
+fi
+
+for node in ${nodes}; do
+  if [ "$(docker inspect "${node}" --format '{{index .Config.Labels "io.x-k8s.kind.cluster"}}')" != "desktop" ]; then
+    echo "Select the Kind provisioner in Docker Desktop Kubernetes settings; node ${node} is not a Desktop Kind node" >&2
+    exit 1
+  fi
+
+  mount_propagation="$(docker exec "${node}" findmnt --noheadings --target /var/run/netns --output PROPAGATION)"
+  case "${mount_propagation}" in
+    *shared* | *slave*)
+      ;;
+    *)
+      echo "Node ${node}: /var/run/netns requires shared or slave mount propagation for ambient CNI (found ${mount_propagation})" >&2
+      exit 1
+      ;;
+  esac
+done
+
+docker build --quiet --tag istio-test:local "${ISTIO_TEST_CONTEXT}"
+docker save --output "${temporary_directory}/istio-test.tar" istio-test:local
+for node in ${nodes}; do
+  docker exec -i "${node}" ctr --namespace k8s.io images import - <"${temporary_directory}/istio-test.tar"
+done
+
+kubectl apply --filename "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
 
 case "$(uname -m)" in
   aarch64 | arm64)
@@ -103,6 +128,9 @@ readonly ISTIOCTL="${temporary_directory}/istio-${ISTIO_VERSION}/bin/istioctl"
   --set meshConfig.extensionProviders[0].envoyExtAuthzHttp.headersToDownstreamOnDeny[0]=content-type \
   --set meshConfig.extensionProviders[0].envoyExtAuthzHttp.headersToDownstreamOnDeny[1]=set-cookie
 
+kubectl rollout status daemonset/istio-cni-node --namespace=istio-system --timeout=180s
+kubectl rollout status daemonset/ztunnel --namespace=istio-system --timeout=180s
+
 authentik_host_ip="$(
   kubectl run authentik-host-lookup \
     --image=busybox:1.37 \
@@ -122,7 +150,7 @@ kubectl create namespace istio-ingress --dry-run=client --output=yaml |
   kubectl apply --filename -
 
 openssl req \
-  -addext "subjectAltName=DNS:dev.localhost" \
+  -addext "subjectAltName=DNS:localhost,DNS:authentik.localhost,DNS:dev.localhost,DNS:agentgateway.localhost" \
   -keyout "${temporary_directory}/tls.key" \
   -new \
   -newkey rsa:2048 \
@@ -150,5 +178,45 @@ kubectl patch deployment istio-test \
 kubectl rollout status deployment/metadata-mock --namespace=istio-test --timeout=120s
 kubectl wait --for=condition=Programmed gateway/gateway --namespace=istio-ingress --timeout=120s
 kubectl rollout status deployment/istio-test --namespace=istio-test --timeout=180s
+
+for app in istio-test metadata-mock; do
+  pods="$(kubectl get pods --namespace=istio-test --selector="app=${app}" --output=jsonpath='{.items[*].metadata.name}')"
+  if [ -z "${pods}" ]; then
+    echo "No pods found for ${app}" >&2
+    exit 1
+  fi
+
+  for pod in ${pods}; do
+    kubectl wait --namespace=istio-test "pod/${pod}" \
+      --for=jsonpath='{.metadata.annotations.ambient\.istio\.io/redirection}'=enabled \
+      --timeout=120s
+    containers="$(kubectl get pod "${pod}" --namespace=istio-test --output=jsonpath='{.spec.containers[*].name} {.spec.initContainers[*].name}')"
+    for container in ${containers}; do
+      if [ "${container}" = "istio-proxy" ]; then
+        echo "Pod ${pod} has an injected istio-proxy; the fixture must be ambient-only" >&2
+        exit 1
+      fi
+    done
+  done
+done
+
+curl --fail --insecure --retry 10 --retry-all-errors --retry-delay 3 --silent --show-error \
+  https://authentik.localhost/-/health/live/ >/dev/null
+
+# Google rejects .localhost subdomains, so the Google callback uses localhost and
+# the gateway returns it to authentik.localhost.
+# Authentik returns 404 when the optional Google source is not configured.
+google_login="$(curl --insecure --silent --show-error --output /dev/null --write-out '%{http_code} %{redirect_url}' \
+  https://authentik.localhost/source/oauth/login/google/)"
+if [ "${google_login%% *}" != "404" ] && ! grep --quiet 'redirect_uri=https%3A%2F%2Flocalhost%2Fsource%2Foauth%2Fcallback%2Fgoogle%2F' <<<"${google_login}"; then
+  echo "Google sign-in does not redirect with the https://localhost callback: ${google_login%% *}" >&2
+  exit 1
+fi
+callback_location="$(curl --insecure --silent --show-error --output /dev/null --write-out '%{redirect_url}' \
+  'https://localhost/source/oauth/callback/google/?code=check&state=check')"
+if [ "${callback_location}" != "https://authentik.localhost/source/oauth/callback/google/?code=check&state=check" ]; then
+  echo "The localhost Google callback does not redirect to authentik.localhost" >&2
+  exit 1
+fi
 
 echo "Setup complete. Open https://dev.localhost/istio-test/auth and accept the temporary certificate."

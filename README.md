@@ -59,7 +59,9 @@ tofu test
 
 ### Local browser authentication
 
-The `tests/docker` fixture exercises Istio and Authentik browser authentication with Docker Desktop Kubernetes and [`pt-pneuma-istio-test`](https://github.com/osinfra-io/pt-pneuma-istio-test). Install the [`platform-grouping` plugin](https://github.com/osinfra-io/pt-ai-plugins/tree/main/plugins/platform-grouping) and ask Copilot CLI to use the `test-istio-authentik-locally` skill instead of running the fixture manually. The skill discovers the related repositories, runs the setup and verification checks, diagnoses failures, supports optional Google OAuth testing, and performs cleanup when requested.
+The `tests/docker` fixture exercises Istio and Authentik browser authentication on an ambient-only mesh (`istiod`, `istio-cni`, and `ztunnel`; no sidecars) with Docker Desktop Kubernetes and [`pt-pneuma-istio-test`](https://github.com/osinfra-io/pt-pneuma-istio-test). Install the [`platform-grouping` plugin](https://github.com/osinfra-io/pt-ai-plugins/tree/main/plugins/platform-grouping) and ask Copilot CLI to use the `test-istio-authentik-locally` skill instead of running the fixture manually. The skill discovers the related repositories, runs the setup and verification checks, diagnoses failures, supports optional Google OAuth testing, and performs cleanup when requested.
+
+Docker Desktop Kubernetes must use the **Kind** cluster provisioning method. The legacy kubeadm provisioner's VM root mount is not shared, so `istio-cni` cannot start ([docker/desktop-feedback#629](https://github.com/docker/desktop-feedback/issues/629), [istio/istio#47436](https://github.com/istio/istio/issues/47436)); `tests/docker/setup.sh` rejects it rather than falling back to sidecar mode.
 
 ```text
 Use the test-istio-authentik-locally skill to test this checkout.

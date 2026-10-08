@@ -21,7 +21,7 @@ Every cluster is assigned its own logical Istio network (derived from `cluster_p
 The regional module always deploys the ambient control/data plane and an internal HBONE east-west gateway; public ingress is disabled unless `enable_istio_gateway` is true. It requires the shared cert-manager root certificate and private key even when `enable_istio_gateway` is false. When `enable_istio_gateway` is true, it writes both values to `istio-ingress/cert-manager-ca` in each regional cluster, and the Secret resource values are stored in OpenTofu state. When it is false, no Kubernetes Secret is created. Protect the key in state and at rest. The current Istio chart default is a release candidate because the corresponding GA charts were not published in the configured chart repository. The root Cloud Armor policy blocks preconfigured WAF matches, rate-limits otherwise unmatched traffic at 500 requests per minute, and allows that traffic by default while it remains under the limit; excess requests receive HTTP 429. Test explicit allow rules and WAF exclusions carefully. Gateways, global addresses, Cloud Armor, managed certificates, DNS, and cross-region traffic can incur GCP costs.
 
 > [!TIP]
-> See [tests/fixtures](tests/fixtures) for example configurations.
+> You can check the [tests/fixtures](tests/fixtures) directory for example configurations. These fixtures set up the system for testing by providing all the necessary initial code, thus creating good examples on which to base your configurations.
 
 Google project services must be enabled before using this module. As a best practice, these should be defined in the [pt-arche-google-project](https://github.com/osinfra-io/pt-arche-google-project) module. The following services are required:
 

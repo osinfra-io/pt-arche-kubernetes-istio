@@ -168,18 +168,18 @@ assert_runtime_state_safe "${runtime_test_state}"
   tofu_init() { calls+="init "; }
   assert_runtime_state_safe() { calls+="state-check "; }
   ensure_owned_resource() {
-    [ "$*" = "namespace istio-system default" ]
+    [ "$*" = "namespace istio-system default" ] || exit 1
     calls+="owner-check "
   }
   kube() {
-    [ "$*" = "apply --filename=-" ]
-    manifest="$(cat)"
-    grep -Fq "local-gateway-stack-owner: ${OWNER_VALUE}" <<<"${manifest}"
-    grep -Fq "name: istio-system" <<<"${manifest}"
+    [ "$*" = "apply --filename=-" ] || exit 1
+    manifest="$(cat)" || exit 1
+    grep -Fq "local-gateway-stack-owner: ${OWNER_VALUE}" <<<"${manifest}" || exit 1
+    grep -Fq "name: istio-system" <<<"${manifest}" || exit 1
     calls+="owned-namespace "
   }
   tofu() {
-    [ "${calls}" = "init state-check owner-check owned-namespace " ]
+    [ "${calls}" = "init state-check owner-check owned-namespace " ] || exit 1
     return 1
   }
   # Exercise namespace ownership even when the subsequent runtime apply fails.

@@ -10,15 +10,7 @@ Every cluster is assigned its own logical Istio network (derived from `cluster_p
 
 ## 🔩 Usage
 
-### Module interfaces
-
-| Source path | Purpose | Interface |
-| --- | --- | --- |
-| Repository root | Creates fleet-level ingress IP, managed certificate, DNS, Cloud Armor policy, and TLS policy when this project owns multi-cluster ingress. | [`variables.tofu`](variables.tofu) · [`outputs.tofu`](outputs.tofu) |
-| `//regional` | Deploys ambient Istio, CNI, ztunnel, per-cluster east-west gateway, and optional ingress/MCI/MCS resources. | [`regional/variables.tofu`](regional/variables.tofu) · [`regional/outputs.tofu`](regional/outputs.tofu) |
-| `//regional/manifests` | Creates mesh security policy, destination rules, and `HTTPRoute` resources for application routes and optional regional failover. | [`regional/manifests/variables.tofu`](regional/manifests/variables.tofu) |
-
-The regional module always deploys the ambient control/data plane and an internal HBONE east-west gateway; public ingress is disabled unless `enable_istio_gateway` is true. It requires the shared cert-manager root certificate and private key even when `enable_istio_gateway` is false. When `enable_istio_gateway` is true, it writes both values to `istio-ingress/cert-manager-ca` in each regional cluster, and the Secret resource values are stored in OpenTofu state. When it is false, no Kubernetes Secret is created. Protect the key in state and at rest. The current Istio chart default is a release candidate because the corresponding GA charts were not published in the configured chart repository. The root Cloud Armor policy blocks preconfigured WAF matches, rate-limits otherwise unmatched traffic at 500 requests per minute, and allows that traffic by default while it remains under the limit; excess requests receive HTTP 429. Test explicit allow rules and WAF exclusions carefully. Gateways, global addresses, Cloud Armor, managed certificates, DNS, and cross-region traffic can incur GCP costs.
+The regional module requires the shared cert-manager root certificate and private key. Enabling `enable_istio_gateway` exposes public ingress and stores the CA in `istio-ingress/cert-manager-ca` and OpenTofu state; protect both. The default chart is a release candidate. Cloud Armor allows otherwise unmatched traffic below 500 requests per minute and returns HTTP 429 above that limit; test allow rules and WAF exclusions carefully.
 
 > [!TIP]
 > You can check the [tests/fixtures](tests/fixtures) directory for example configurations. These fixtures set up the system for testing by providing all the necessary initial code, thus creating good examples on which to base your configurations.
@@ -57,14 +49,12 @@ tofu init
 tofu test
 ```
 
-### Local browser authentication
+### Local gateway-stack testing
 
-The `tests/docker` fixture exercises Istio and Authentik browser authentication on an ambient-only mesh (`istiod`, `istio-cni`, and `ztunnel`; no sidecars) with Docker Desktop Kubernetes and [`pt-pneuma-istio-test`](https://github.com/osinfra-io/pt-pneuma-istio-test). Install the [`platform-grouping` plugin](https://github.com/osinfra-io/pt-ai-plugins/tree/main/plugins/platform-grouping) and ask Copilot CLI to use the `test-local-gateway-stack` skill instead of running the fixture manually. The skill discovers the related repositories, runs the setup and verification checks, diagnoses failures, supports optional Google OAuth testing, and performs cleanup when requested.
-
-Docker Desktop Kubernetes must use the **Kind** cluster provisioning method. The legacy kubeadm provisioner's VM root mount is not shared, so `istio-cni` cannot start ([docker/desktop-feedback#629](https://github.com/docker/desktop-feedback/issues/629), [istio/istio#47436](https://github.com/istio/istio/issues/47436)); `tests/docker/setup.sh` rejects it rather than falling back to sidecar mode.
+Run this command in Copilot CLI with the [`platform-grouping` plugin](https://github.com/osinfra-io/pt-ai-plugins/tree/main/plugins/platform-grouping) installed:
 
 ```text
-Use the test-local-gateway-stack skill to test this checkout.
+/platform-grouping:test-local-gateway-stack
 ```
 
 ## 📦 Release

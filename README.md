@@ -21,7 +21,7 @@ Every cluster is assigned its own logical Istio network (derived from `cluster_p
 The regional module always deploys the ambient control/data plane and an internal HBONE east-west gateway; public ingress is disabled unless `enable_istio_gateway` is true. It requires the shared cert-manager root certificate and private key even when `enable_istio_gateway` is false. When `enable_istio_gateway` is true, it writes both values to `istio-ingress/cert-manager-ca` in each regional cluster, and the Secret resource values are stored in OpenTofu state. When it is false, no Kubernetes Secret is created. Protect the key in state and at rest. The current Istio chart default is a release candidate because the corresponding GA charts were not published in the configured chart repository. The root Cloud Armor policy blocks preconfigured WAF matches, rate-limits otherwise unmatched traffic at 500 requests per minute, and allows that traffic by default while it remains under the limit; excess requests receive HTTP 429. Test explicit allow rules and WAF exclusions carefully. Gateways, global addresses, Cloud Armor, managed certificates, DNS, and cross-region traffic can incur GCP costs.
 
 > [!TIP]
-> You can check the [tests/fixtures](tests/fixtures) directory for example configurations. These fixtures set up the system for testing by providing all the necessary initial code, thus creating good examples on which to base your configurations.
+> See [tests/fixtures](tests/fixtures) for example configurations.
 
 Google project services must be enabled before using this module. As a best practice, these should be defined in the [pt-arche-google-project](https://github.com/osinfra-io/pt-arche-google-project) module. The following services are required:
 
@@ -36,8 +36,6 @@ Google project services must be enabled before using this module. As a best prac
 
 ## 📋 Skills and Knowledge
 
-Links to documentation and other resources required to develop and iterate in this repository successfully.
-
 - [ambient mesh](https://istio.io/latest/docs/ambient)
 - [cloud armor](https://cloud.google.com/armor/docs)
 - [cloud dns](https://cloud.google.com/dns/docs)
@@ -47,7 +45,7 @@ Links to documentation and other resources required to develop and iterate in th
 
 ## 🔍 Tests
 
-All tests are [mocked](https://opentofu.org/docs/cli/commands/test/#the-mock_provider-blocks) allowing us to test the module without creating infrastructure or requiring credentials. The trade-offs are acceptable in favor of speed and simplicity. In an OpenTofu test, a mocked provider or resource will generate fake data for all computed attributes that would normally be provided by the underlying provider APIs.
+Tests use [mocked providers](https://opentofu.org/docs/cli/commands/test/#the-mock_provider-blocks); no infrastructure or credentials are required.
 
 ```none
 tofu init
@@ -59,9 +57,7 @@ tofu test
 
 ### Local browser authentication
 
-The `tests/docker` fixture exercises Istio and Authentik browser authentication on an ambient-only mesh (`istiod`, `istio-cni`, and `ztunnel`; no sidecars) with Docker Desktop Kubernetes and [`pt-pneuma-istio-test`](https://github.com/osinfra-io/pt-pneuma-istio-test). Install the [`platform-grouping` plugin](https://github.com/osinfra-io/pt-ai-plugins/tree/main/plugins/platform-grouping) and ask Copilot CLI to use the `test-local-gateway-stack` skill instead of running the fixture manually. The skill discovers the related repositories, runs the setup and verification checks, diagnoses failures, supports optional Google OAuth testing, and performs cleanup when requested.
-
-Docker Desktop Kubernetes must use the **Kind** cluster provisioning method. The legacy kubeadm provisioner's VM root mount is not shared, so `istio-cni` cannot start ([docker/desktop-feedback#629](https://github.com/docker/desktop-feedback/issues/629), [istio/istio#47436](https://github.com/istio/istio/issues/47436)); `tests/docker/setup.sh` rejects it rather than falling back to sidecar mode.
+Use the `test-local-gateway-stack` skill from the [`platform-grouping` plugin](https://github.com/osinfra-io/pt-ai-plugins/tree/main/plugins/platform-grouping) for setup, browser-authentication checks, optional Google OAuth, diagnostics, and teardown:
 
 ```text
 Use the test-local-gateway-stack skill to test this checkout.

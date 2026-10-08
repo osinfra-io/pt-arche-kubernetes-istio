@@ -8,6 +8,7 @@
 # Ignore provider lock file
 .tofu.lock.hcl
 .terraform.lock.hcl
+tests/kubernetes/.work/
 
 # Ignore plan output files
 plan.out

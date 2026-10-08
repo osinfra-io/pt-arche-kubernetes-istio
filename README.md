@@ -4,13 +4,13 @@
 
 ## Repository Description
 
-Reusable OpenTofu child module that deploys the Istio service mesh on GKE in ambient mode, using the official Helm charts for the ambient data plane (`istio-cni` and `ztunnel`) with `istiod` as the control plane. It optionally provisions a Kubernetes Gateway API ingress gateway — the `Gateway` resource is reconciled by istiod, which auto-provisions the `gateway-istio` data plane — backed by a global static IP, Cloud Armor WAF/DDoS protection with adaptive rate limiting, and an SSL policy for TLS termination. Routing is expressed with `HTTPRoute` resources. Multi-cluster ingress (MCI) and multi-cluster service (MCS) resources are supported for cross-cluster traffic, and cert-manager integration is included for mTLS via an intermediate CA.
+Reusable OpenTofu child module that deploys the Istio service mesh on GKE in ambient mode, using the official Helm charts for the ambient data plane (`istio-cni` and `ztunnel`) with `istiod` as the control plane. The regional wrapper reuses the cloud-independent `regional/runtime` Helm submodule, also used by the opt-in Docker Desktop fixture. It optionally provisions a Kubernetes Gateway API ingress gateway — the `Gateway` resource is reconciled by istiod, which auto-provisions the `gateway-istio` data plane — backed by a global static IP, Cloud Armor WAF/DDoS protection with adaptive rate limiting, and an SSL policy for TLS termination. Routing is expressed with `HTTPRoute` resources. Multi-cluster ingress (MCI) and multi-cluster service (MCS) resources are supported for cross-cluster traffic, and cert-manager integration is included for mTLS via an intermediate CA.
 
 Every cluster is assigned its own logical Istio network (derived from `cluster_prefix`/region/zone/environment) and gets a dedicated ambient east-west `Gateway` (`gatewayClassName: istio-east-west`, HBONE-only on port `15008`, internal GKE load balancer). This follows [upstream Istio's supported ambient multicluster path](https://istio.io/latest/docs/ambient/install/multicluster/) — same-network ambient multicluster is documented as untested and may be broken — and requires no per-team configuration: newly onboarded teams and clusters get a working east-west gateway automatically. Services that should be reachable from other clusters must be labeled `istio.io/global: "true"` in the consuming repo.
 
 ## 🔩 Usage
 
-The regional module requires the shared cert-manager root certificate and private key. Enabling `enable_istio_gateway` exposes public ingress and stores the CA in `istio-ingress/cert-manager-ca` and OpenTofu state; protect both. The default chart is a release candidate. Cloud Armor allows otherwise unmatched traffic below 500 requests per minute and returns HTTP 429 above that limit; test allow rules and WAF exclusions carefully.
+The regional module requires the shared cert-manager root certificate and private key. Enabling `enable_istio_gateway` exposes public ingress and stores the CA in `istio-ingress/cert-manager-ca` and OpenTofu state; protect both. The Istio chart and image version is declared once in `regional/shared/versions.tofu` and shared by the GKE wrapper and local runtime. The default chart is a release candidate. Cloud Armor allows otherwise unmatched traffic below 500 requests per minute and returns HTTP 429 above that limit; test allow rules and WAF exclusions carefully.
 
 > [!TIP]
 > You can check the [tests/fixtures](tests/fixtures) directory for example configurations. These fixtures set up the system for testing by providing all the necessary initial code, thus creating good examples on which to base your configurations.
@@ -39,7 +39,7 @@ Links to documentation and other resources required to develop and iterate in th
 
 ## 🔍 Tests
 
-All tests are [mocked](https://opentofu.org/docs/cli/commands/test/#the-mock_provider-blocks) allowing us to test the module without creating infrastructure or requiring credentials. The trade-offs are acceptable in favor of speed and simplicity. In an OpenTofu test, a mocked provider or resource will generate fake data for all computed attributes that would normally be provided by the underlying provider APIs.
+All OpenTofu tests are [mocked](https://opentofu.org/docs/cli/commands/test/#the-mock_provider-blocks) allowing us to test the module without creating infrastructure or requiring credentials. The trade-offs are acceptable in favor of speed and simplicity. In an OpenTofu test, a mocked provider or resource will generate fake data for all computed attributes that would normally be provided by the underlying provider APIs.
 
 ```none
 tofu init

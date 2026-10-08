@@ -205,10 +205,11 @@ curl --fail --insecure --retry 10 --retry-all-errors --retry-delay 3 --silent --
 
 # Google rejects .localhost subdomains, so the Google callback uses localhost and
 # the gateway returns it to authentik.localhost.
-google_login_location="$(curl --insecure --silent --show-error --output /dev/null --write-out '%{redirect_url}' \
+# Authentik returns 404 when the optional Google source is not configured.
+google_login="$(curl --insecure --silent --show-error --output /dev/null --write-out '%{http_code} %{redirect_url}' \
   https://authentik.localhost/source/oauth/login/google/)"
-if [[ -n "${google_login_location}" ]] && ! grep --quiet 'redirect_uri=https%3A%2F%2Flocalhost%2Fsource%2Foauth%2Fcallback%2Fgoogle%2F' <<<"${google_login_location}"; then
-  echo "Google sign-in does not use the https://localhost callback" >&2
+if [ "${google_login%% *}" != "404" ] && ! grep --quiet 'redirect_uri=https%3A%2F%2Flocalhost%2Fsource%2Foauth%2Fcallback%2Fgoogle%2F' <<<"${google_login}"; then
+  echo "Google sign-in does not redirect with the https://localhost callback: ${google_login%% *}" >&2
   exit 1
 fi
 callback_location="$(curl --insecure --silent --show-error --output /dev/null --write-out '%{redirect_url}' \

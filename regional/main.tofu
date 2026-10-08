@@ -1,3 +1,42 @@
+# Istio Runtime
+# https://github.com/osinfra-io/pt-arche-kubernetes-istio
+
+module "runtime" {
+  source = "./runtime"
+
+  ca_address                      = "cert-manager-istio-csr.cert-manager.svc:443"
+  chart_repository                = var.chart_repository
+  cluster_name                    = local.multi_cluster_name
+  cni_cpu_limits                  = var.cni_cpu_limits
+  cni_cpu_requests                = var.cni_cpu_requests
+  cni_memory_limits               = var.cni_memory_limits
+  cni_memory_requests             = var.cni_memory_requests
+  cni_platform                    = "gke"
+  enable_ca_server                = false
+  enable_multi_network            = true
+  environment                     = module.core_helpers.environment
+  image_hub                       = local.istio_image_hub
+  istio_version                   = var.istio_version
+  mesh_config_extension_providers = var.mesh_config_extension_providers
+  mesh_config_service_settings    = var.mesh_config_service_settings
+  network                         = local.istio_network
+  pilot_autoscale_max             = var.pilot_autoscale_max
+  pilot_autoscale_min             = var.pilot_autoscale_min
+  pilot_cpu_limits                = var.pilot_cpu_limits
+  pilot_cpu_requests              = var.pilot_cpu_requests
+  pilot_memory_limits             = var.pilot_memory_limits
+  pilot_memory_requests           = var.pilot_memory_requests
+  pilot_replica_count             = var.pilot_replica_count
+  proxy_cpu_limits                = var.proxy_cpu_limits
+  proxy_cpu_requests              = var.proxy_cpu_requests
+  proxy_memory_limits             = var.proxy_memory_limits
+  proxy_memory_requests           = var.proxy_memory_requests
+  ztunnel_cpu_limits              = var.ztunnel_cpu_limits
+  ztunnel_cpu_requests            = var.ztunnel_cpu_requests
+  ztunnel_memory_limits           = var.ztunnel_memory_limits
+  ztunnel_memory_requests         = var.ztunnel_memory_requests
+}
+
 # Google Compute Global Address Resource
 # https://search.opentofu.org/provider/hashicorp/google/latest/docs/resources/compute_global_address
 
@@ -25,127 +64,12 @@ resource "google_dns_record_set" "istio_gateways" {
   type         = "A"
 }
 
-# Helm Release
-# https://search.opentofu.org/provider/hashicorp/helm/latest/docs/resources/release
-
-resource "helm_release" "base" {
-  chart      = "base"
-  name       = "base"
-  namespace  = "istio-system"
-  repository = var.chart_repository
-
-  version = var.istio_version
-}
-
-resource "helm_release" "istiod" {
-  depends_on = [
-    helm_release.base
-  ]
-
-  chart      = "istiod"
-  name       = "istiod"
-  namespace  = "istio-system"
-  repository = var.chart_repository
-
-  values = [
-    file("${path.module}/helm/istiod.yml"),
-    yamlencode(local.istiod_helm_values)
-  ]
-
-  version = var.istio_version
-}
-
-resource "helm_release" "cni" {
-  depends_on = [
-    helm_release.istiod
-  ]
-
-  chart      = "cni"
-  name       = "istio-cni"
-  namespace  = "istio-system"
-  repository = var.chart_repository
-
-  values = [
-    yamlencode({
-      global = {
-        hub = "${var.artifact_registry}/istio"
-      }
-
-      # Selects the istio-cni chart's bundled GKE platform profile, which unsets cniBinDir so the
-      # chart autodetects the GKE node's binary path and enables the ResourceQuota required to
-      # admit the CNI and ztunnel system-node-critical pods.
-      platform = "gke"
-
-      podLabels = {
-        "tags.datadoghq.com/env"     = module.core_helpers.environment
-        "tags.datadoghq.com/service" = "istio-cni"
-        "tags.datadoghq.com/source"  = "istio"
-        "tags.datadoghq.com/version" = var.istio_version
-      }
-
-      profile = "ambient"
-
-      resources = local.istio_cni_resources
-    })
-  ]
-
-  version = var.istio_version
-}
-
-resource "helm_release" "ztunnel" {
-  depends_on = [
-    helm_release.cni
-  ]
-
-  chart      = "ztunnel"
-  name       = "ztunnel"
-  namespace  = "istio-system"
-  repository = var.chart_repository
-
-  values = [
-    yamlencode({
-      global = {
-        # Matches istiod's global.caAddress (regional/helm/istiod.yml) so ztunnel requests
-        # workload certificates from cert-manager-istio-csr instead of istiod's disabled CA server.
-        caAddress = "cert-manager-istio-csr.cert-manager.svc:443"
-        hub       = "${var.artifact_registry}/istio"
-        network   = local.istio_network
-      }
-
-      multiCluster = {
-        clusterName = local.multi_cluster_name
-      }
-
-      podLabels = {
-        "tags.datadoghq.com/env"     = module.core_helpers.environment
-        "tags.datadoghq.com/service" = "istio-ztunnel"
-        "tags.datadoghq.com/source"  = "istio"
-        "tags.datadoghq.com/version" = var.istio_version
-      }
-
-      resources = {
-        limits = {
-          cpu    = var.ztunnel_cpu_limits
-          memory = var.ztunnel_memory_limits
-        }
-
-        requests = {
-          cpu    = var.ztunnel_cpu_requests
-          memory = var.ztunnel_memory_requests
-        }
-      }
-    })
-  ]
-
-  version = var.istio_version
-}
-
 # Kubernetes Cluster Role Binding Resource
 # https://search.opentofu.org/provider/hashicorp/kubernetes/latest/docs/resources/cluster_role_binding_v1
 
 resource "kubernetes_cluster_role_binding_v1" "istio_reader_gateway_api" {
   depends_on = [
-    helm_release.istiod,
+    module.runtime,
     kubernetes_cluster_role_v1.istio_reader_gateway_api
   ]
 
@@ -171,7 +95,7 @@ resource "kubernetes_cluster_role_binding_v1" "istio_reader_gateway_api" {
 
 resource "kubernetes_cluster_role_v1" "istio_reader_gateway_api" {
   depends_on = [
-    helm_release.istiod
+    module.runtime
   ]
 
   metadata {
@@ -271,7 +195,7 @@ resource "kubernetes_ingress_v1" "istio_gateway" {
 
 resource "kubernetes_labels" "istio_system_network" {
   depends_on = [
-    helm_release.base
+    module.runtime
   ]
 
   api_version = "v1"
@@ -291,7 +215,7 @@ resource "kubernetes_labels" "istio_system_network" {
 
 resource "kubernetes_manifest" "istio_east_west_gateway" {
   depends_on = [
-    helm_release.istiod
+    module.runtime
   ]
 
   manifest = {

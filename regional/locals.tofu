@@ -43,26 +43,6 @@ locals {
     }
   ]
 
-  # The upstream chart ships CNI requests only, with no limits. The limits key is omitted
-  # entirely unless a limit is set, so the rendered DaemonSet matches the chart's default
-  # rather than carrying an empty limits map.
-  istio_cni_limits = {
-    for k, v in {
-      cpu    = var.cni_cpu_limits
-      memory = var.cni_memory_limits
-    } : k => v if v != null
-  }
-
-  istio_cni_resources = merge(
-    {
-      requests = {
-        cpu    = var.cni_cpu_requests
-        memory = var.cni_memory_requests
-      }
-    },
-    length(local.istio_cni_limits) > 0 ? { limits = local.istio_cni_limits } : {}
-  )
-
   # Strategic-merge patch for the generated east-west gateway Deployment. istiod names the
   # gateway container "istio-proxy". The chart's default requests are sized for gateways
   # carrying real cross-cluster traffic; this makes them tunable per environment. Also carries
@@ -110,6 +90,7 @@ locals {
   })
 
   istio_gateway_address = var.enable_istio_gateway ? google_compute_global_address.istio_gateway.address : null
+  istio_image_hub       = "${var.artifact_registry}/istio"
 
   # Strategic-merge patch for the generated gateway Deployment. istiod names the gateway
   # container "istio-proxy". Ports the resources, tolerations, topology spread, and Datadog
@@ -256,75 +237,6 @@ locals {
   # supported multi-network east-west gateway path (same-network ambient multicluster is
   # untested upstream).
   istio_network = local.multi_cluster_name
-
-  istiod_helm_values = {
-    autoscaleMax = var.pilot_autoscale_max
-    autoscaleMin = var.pilot_autoscale_min
-
-    deploymentLabels = {
-      "tags.datadoghq.com/env"     = module.core_helpers.environment
-      "tags.datadoghq.com/version" = var.istio_version
-    }
-
-    # Ambient multi-network multicluster flags per the upstream install guide.
-    # AMBIENT_ENABLE_MULTI_NETWORK_INGRESS lets ingress Gateway proxies route to endpoints in
-    # remote networks via their east-west gateways.
-    env = {
-      AMBIENT_ENABLE_BAGGAGE               = "true"
-      AMBIENT_ENABLE_MULTI_NETWORK         = "true"
-      AMBIENT_ENABLE_MULTI_NETWORK_INGRESS = "true"
-    }
-
-    global = {
-      hub = "${var.artifact_registry}/istio"
-
-      multiCluster = {
-        clusterName = local.multi_cluster_name
-      }
-
-      network = local.istio_network
-
-      proxy = {
-        resources = {
-          limits = {
-            cpu    = var.proxy_cpu_limits
-            memory = var.proxy_memory_limits
-          }
-
-          requests = {
-            cpu    = var.proxy_cpu_requests
-            memory = var.proxy_memory_requests
-          }
-        }
-      }
-    }
-
-    # All mesh config is rendered by Helm — never patch the istio ConfigMap out-of-band, which
-    # drops every other rendered key (including the ambient profile's serviceScopeConfigs).
-    meshConfig = {
-      extensionProviders = var.mesh_config_extension_providers
-      serviceSettings    = var.mesh_config_service_settings
-    }
-
-    podLabels = {
-      "tags.datadoghq.com/env"     = module.core_helpers.environment
-      "tags.datadoghq.com/version" = var.istio_version
-    }
-
-    replicaCount = var.pilot_replica_count
-
-    resources = {
-      limits = {
-        cpu    = var.pilot_cpu_limits
-        memory = var.pilot_memory_limits
-      }
-
-      requests = {
-        cpu    = var.pilot_cpu_requests
-        memory = var.pilot_memory_requests
-      }
-    }
-  }
 
   multi_cluster_name = module.core_helpers.zone != null ? "${var.cluster_prefix}-${module.core_helpers.region}-${module.core_helpers.zone}-${module.core_helpers.env}" : "${var.cluster_prefix}-${module.core_helpers.region}-${module.core_helpers.env}"
 }

@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      labels:
+        local-gateway-stack-owner: osinfra-local-gateway-stack
+      name: istio-ingress
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      labels:
+        local-gateway-stack-owner: osinfra-local-gateway-stack
+      name: gateway
+      namespace: istio-ingress
+    spec:
+      gatewayClassName: istio
+      listeners:
+        - allowedRoutes:
+            namespaces:
+              from: All
+          hostname: "*.localhost"
+          name: https
+          port: 443
+          protocol: HTTPS
+          tls:
+            certificateRefs:
+              - name: gateway-localhost-tls
+            mode: Terminate
+        - allowedRoutes:
+            namespaces:
+              from: All
+          hostname: localhost
+          name: https-localhost
+          port: 443
+          protocol: HTTPS
+          tls:
+            certificateRefs:
+              - name: gateway-localhost-tls
+            mode: Terminate

@@ -10,14 +10,6 @@ Every cluster is assigned its own logical Istio network (derived from `cluster_p
 
 ## 🔩 Usage
 
-### Module interfaces
-
-| Source path | Purpose | Interface |
-| --- | --- | --- |
-| Repository root | Creates fleet-level ingress IP, managed certificate, DNS, Cloud Armor policy, and TLS policy when this project owns multi-cluster ingress. | [`variables.tofu`](variables.tofu) · [`outputs.tofu`](outputs.tofu) |
-| `//regional` | Deploys ambient Istio, CNI, ztunnel, per-cluster east-west gateway, and optional ingress/MCI/MCS resources. | [`regional/variables.tofu`](regional/variables.tofu) · [`regional/outputs.tofu`](regional/outputs.tofu) |
-| `//regional/manifests` | Creates mesh security policy, destination rules, and `HTTPRoute` resources for application routes and optional regional failover. | [`regional/manifests/variables.tofu`](regional/manifests/variables.tofu) |
-
 The regional module always deploys the ambient control/data plane and an internal HBONE east-west gateway; public ingress is disabled unless `enable_istio_gateway` is true. It requires the shared cert-manager root certificate and private key even when `enable_istio_gateway` is false. When `enable_istio_gateway` is true, it writes both values to `istio-ingress/cert-manager-ca` in each regional cluster, and the Secret resource values are stored in OpenTofu state. When it is false, no Kubernetes Secret is created. Protect the key in state and at rest. The current Istio chart default is a release candidate because the corresponding GA charts were not published in the configured chart repository. The root Cloud Armor policy blocks preconfigured WAF matches, rate-limits otherwise unmatched traffic at 500 requests per minute, and allows that traffic by default while it remains under the limit; excess requests receive HTTP 429. Test explicit allow rules and WAF exclusions carefully. Gateways, global addresses, Cloud Armor, managed certificates, DNS, and cross-region traffic can incur GCP costs.
 
 > [!TIP]

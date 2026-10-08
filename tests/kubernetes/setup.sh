@@ -35,8 +35,16 @@ kube wait --for=condition=Established \
 
 tofu_init "${LOCAL_DIR}/runtime" istio-runtime
 assert_runtime_state_safe
+ensure_owned_resource namespace istio-system default
+kube apply --filename=- <<YAML
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    local-gateway-stack-owner: ${OWNER_VALUE}
+  name: istio-system
+YAML
 tofu -chdir="${LOCAL_DIR}/runtime" apply -auto-approve
-kube label namespace istio-system "local-gateway-stack-owner=${OWNER_VALUE}" --overwrite
 
 nodes="$(kube get nodes --output=jsonpath='{.items[*].metadata.name}')"
 docker build --quiet --tag istio-test:local "${ISTIO_TEST_CONTEXT}"

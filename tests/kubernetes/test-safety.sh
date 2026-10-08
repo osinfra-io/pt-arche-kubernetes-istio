@@ -163,4 +163,33 @@ assert_fails assert_runtime_state_safe "${runtime_test_state}"
 mock_mismatched_helm_release=""
 assert_runtime_state_safe "${runtime_test_state}"
 
+(
+  calls=""
+  tofu_init() { calls+="init "; }
+  assert_runtime_state_safe() { calls+="state-check "; }
+  ensure_owned_resource() {
+    [ "$*" = "namespace istio-system default" ]
+    calls+="owner-check "
+  }
+  kube() {
+    [ "$*" = "apply --filename=-" ]
+    manifest="$(cat)"
+    grep -Fq "local-gateway-stack-owner: ${OWNER_VALUE}" <<<"${manifest}"
+    grep -Fq "name: istio-system" <<<"${manifest}"
+    calls+="owned-namespace "
+  }
+  tofu() {
+    [ "${calls}" = "init state-check owner-check owned-namespace " ]
+    return 1
+  }
+  # Exercise namespace ownership even when the subsequent runtime apply fails.
+  setup_runtime="$(sed -n '/^tofu_init .* istio-runtime$/,/^tofu .* apply -auto-approve$/p' "${LOCAL_DIR}/setup.sh")"
+  [ -n "${setup_runtime}" ]
+  if source /dev/stdin <<<"${setup_runtime}"; then
+    echo "Expected simulated runtime apply to fail" >&2
+    exit 1
+  fi
+  [ "${calls}" = "init state-check owner-check owned-namespace " ]
+)
+
 echo "Local fixture ownership tests passed."

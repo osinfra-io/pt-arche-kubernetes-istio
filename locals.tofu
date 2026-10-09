@@ -4,7 +4,7 @@
 locals {
   cloud_armor_method_enforcement_exception_expression = join(" || ", [
     for scope in var.cloud_armor_method_enforcement_exceptions :
-    "(has(request.headers['host']) && request.headers['host'] == ${jsonencode(scope.hostname)} && request.path.startsWith(${jsonencode(scope.path_prefix)}) && request.method.matches(${jsonencode("^(${join("|", sort(tolist(scope.methods)))})$")}))"
+    "(has(request.headers['host']) && request.headers['host'] == ${jsonencode(scope.hostname)} && request.path.startsWith(${jsonencode(scope.path_prefix)}) && request.method.matches(${jsonencode(join("|", [for method in sort(tolist(scope.methods)) : "^${method}$"]))}))"
   ])
 
   gateway_domains = keys(var.gateway_dns)

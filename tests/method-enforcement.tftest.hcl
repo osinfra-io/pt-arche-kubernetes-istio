@@ -28,8 +28,19 @@ run "scoped_api_methods" {
   }
 
   assert {
-    condition     = local.waf_rule_expressions["methodenforcement-v33-stable"] == "evaluatePreconfiguredWaf('methodenforcement-v33-stable', {'sensitivity': 1}) && !((has(request.headers['host']) && request.headers['host'] == \"authentik.sb.osinfra.io\" && request.path.startsWith(\"/api/v3/\") && request.method.matches(\"^(DELETE|PATCH|PUT)$\")))"
+    condition     = local.waf_rule_expressions["methodenforcement-v33-stable"] == "evaluatePreconfiguredWaf('methodenforcement-v33-stable', {'sensitivity': 1}) && !((has(request.headers['host']) && request.headers['host'] == \"authentik.sb.osinfra.io\" && request.path.startsWith(\"/api/v3/\") && request.method.matches(\"^DELETE$|^PATCH$|^PUT$\")))"
     error_message = "The exception must match only the configured host, API path boundary, and methods."
+  }
+
+  assert {
+    condition = alltrue([
+      for method in ["DELETE", "PATCH", "PUT"] :
+      can(regex(regex("request\\.method\\.matches\\(\"([^\"]+)\"\\)", local.cloud_armor_method_enforcement_exception_expression)[0], method))
+      ]) && alltrue([
+      for method in ["GET", "POST", "TRACE", "XDELETE", "DELETEOTHER", "patch"] :
+      !can(regex(regex("request\\.method\\.matches\\(\"([^\"]+)\"\\)", local.cloud_armor_method_enforcement_exception_expression)[0], method))
+    ])
+    error_message = "Method matching must allow exact configured methods, not partial or case-insensitive matches."
   }
 
   assert {

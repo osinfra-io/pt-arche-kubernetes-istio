@@ -145,10 +145,11 @@ ensure_auth_resources_safe() {
   local state="${1:-${WORK_DIR}/browser-auth.tfstate}"
   local key policy_name kind name
   local -a resources=(
+    "envoyfilters.networking.istio.io gateway-authentik-application-access"
     "envoyfilters.networking.istio.io gateway-authentik-inbound-header-strip"
   )
 
-  for key in diagnostic agentgateway; do
+  for key in diagnostic agentgateway agentgateway_ui agentgateway_api agentgateway_config; do
     policy_name="$(auth_policy_name "${key}")"
     resources+=("authorizationpolicies.security.istio.io ${policy_name}")
   done

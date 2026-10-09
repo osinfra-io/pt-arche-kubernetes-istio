@@ -2,6 +2,20 @@
 # https://opentofu.org/docs/language/values/locals
 
 locals {
+  application_group_members = {
+    for name, members in module.team_access.application_group_members :
+    name => var.revoke_application_access ? [] : members
+  }
+
+  application_access_filter_manifests = {
+    for key, manifest in module.browser_auth.browser_authorization_filter_manifests :
+    key => merge(manifest, {
+      metadata = merge(manifest.metadata, {
+        labels = local.owner_labels
+      })
+    })
+  }
+
   browser_policy_manifests = {
     for key, manifest in module.browser_auth.custom_authorization_policy_manifests :
     key => merge(manifest, {

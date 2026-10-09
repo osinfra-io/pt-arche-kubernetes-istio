@@ -8,6 +8,8 @@ require_local_tools
 require_docker_desktop
 require_owner
 
+python3 "${LOCAL_DIR}/verify-auth-filters.py"
+
 kube wait --for=condition=Programmed gateway/gateway --namespace=istio-ingress --timeout=120s
 kube rollout status deployment/istio-test --namespace=istio-test --timeout=180s
 

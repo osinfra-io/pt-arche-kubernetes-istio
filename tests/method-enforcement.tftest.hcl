@@ -28,7 +28,7 @@ run "scoped_api_methods" {
   }
 
   assert {
-    condition     = local.waf_rule_expressions["methodenforcement-v33-stable"] == "evaluatePreconfiguredWaf('methodenforcement-v33-stable', {'sensitivity': 1}) && !((has(request.headers['host']) && request.headers['host'] == \"authentik.sb.osinfra.io\" && request.path.startsWith(\"/api/v3/\") && request.method in [\"DELETE\",\"PATCH\",\"PUT\"]))"
+    condition     = local.waf_rule_expressions["methodenforcement-v33-stable"] == "evaluatePreconfiguredWaf('methodenforcement-v33-stable', {'sensitivity': 1}) && !((has(request.headers['host']) && request.headers['host'] == \"authentik.sb.osinfra.io\" && request.path.startsWith(\"/api/v3/\") && request.method.matches(\"^(DELETE|PATCH|PUT)$\")))"
     error_message = "The exception must match only the configured host, API path boundary, and methods."
   }
 

@@ -24,6 +24,28 @@ variable "cloud_armor_allow_rules" {
   }
 }
 
+variable "cloud_armor_method_enforcement_exceptions" {
+  description = "Host, path-prefix, and method scopes exempt from method enforcement only; all other WAF rules still apply"
+  type = list(object({
+    hostname    = string
+    methods     = set(string)
+    path_prefix = string
+  }))
+  default = []
+
+  validation {
+    condition = alltrue([
+      for scope in var.cloud_armor_method_enforcement_exceptions :
+      can(regex("^[a-z0-9]+([.-][a-z0-9]+)*$", scope.hostname)) &&
+      startswith(scope.path_prefix, "/") && endswith(scope.path_prefix, "/") &&
+      length(scope.methods) > 0 && alltrue([
+        for method in scope.methods : contains(["DELETE", "PATCH", "PUT"], method)
+      ])
+    ])
+    error_message = "Method exceptions require a lowercase hostname, a path prefix beginning and ending with '/', and explicit DELETE, PATCH, or PUT methods."
+  }
+}
+
 variable "cloud_armor_waf_exclusions" {
   description = "Scoped preconfigured WAF exclusions that exclude specific request query parameter values from inspection by specific rule IDs, instead of allowing the entire request past every preconfigured WAF rule"
   type = list(object({

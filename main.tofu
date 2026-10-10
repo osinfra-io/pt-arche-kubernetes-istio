@@ -141,7 +141,7 @@ resource "google_compute_security_policy" "istio_gateway" {
 
       match {
         expr {
-          expression = "evaluatePreconfiguredWaf('${rule.value.name}', {'sensitivity': ${rule.value.sensitivity}})"
+          expression = local.waf_rule_expressions[rule.value.name]
         }
       }
 

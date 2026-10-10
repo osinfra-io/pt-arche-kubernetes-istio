@@ -8,6 +8,8 @@ require_local_tools
 require_docker_desktop
 require_owner
 
+python3 "${LOCAL_DIR}/verify-auth-filters.py"
+
 kube wait --for=condition=Programmed gateway/gateway --namespace=istio-ingress --timeout=120s
 kube rollout status deployment/istio-test --namespace=istio-test --timeout=180s
 
@@ -54,6 +56,27 @@ location="$(grep -i '^location:' "${response_headers}" | tail -1 | tr -d '\r' | 
 [ "${status}" = "302" ] || die "Expected 302 for protected URL ${url}, got ${status}"
 [[ "${location}" == https://authentik.localhost/application/o/authorize/* ]] ||
   die "Protected URL ${url} did not redirect to Authentik"
+
+for path in /ui/ /api /config_dump; do
+  for identity in anonymous forged; do
+    headers=()
+    if [ "${identity}" = forged ]; then
+      headers=(
+        --header 'X-authentik-osinfra-google-email: member@example.com'
+        --header 'X-authentik-osinfra-google-email: other@example.com'
+        --header 'X-authentik-groups: pt-pneuma: agentgateway Admins'
+      )
+    fi
+    url="https://agentgateway.localhost${path}"
+    status="$(curl --noproxy '*' --connect-timeout 5 --max-time 15 --insecure \
+      --silent --show-error --dump-header "${response_headers}" --output /dev/null \
+      --write-out '%{http_code}' "${headers[@]}" "${url}")"
+    [ "${status}" = "302" ] ||
+      die "Expected Authentik redirect for ${identity} admin request ${url}, got ${status}"
+    grep -qi '^location: https://authentik.localhost/application/o/authorize/' "${response_headers}" ||
+      die "Admin request ${url} did not redirect to Authentik"
+  done
+done
 
 curl --noproxy '*' --connect-timeout 5 --max-time 15 --insecure --silent --show-error --fail \
   https://authentik.localhost/-/health/live/ >/dev/null

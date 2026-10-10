@@ -2,6 +2,11 @@
 # https://opentofu.org/docs/language/values/locals
 
 locals {
+  cloud_armor_method_enforcement_exception_expression = join(" || ", [
+    for scope in var.cloud_armor_method_enforcement_exceptions :
+    "(has(request.headers['host']) && request.headers['host'] == ${jsonencode(scope.hostname)} && request.path.startsWith(${jsonencode(scope.path_prefix)}) && request.method.matches(${jsonencode(join("|", [for method in sort(tolist(scope.methods)) : "^${method}$"]))}))"
+  ])
+
   gateway_domains = keys(var.gateway_dns)
 
   gateway_mci_global_address = var.gke_fleet_host_project_id == "" ? google_compute_global_address.istio_gateway_mci.address : ""
@@ -137,6 +142,13 @@ locals {
       sensitivity = 1
     }
   ]
+
+  waf_rule_expressions = {
+    for rule in local.preconfigured_waf_rules : rule.name =>
+    rule.name == "methodenforcement-v33-stable" && length(var.cloud_armor_method_enforcement_exceptions) > 0 ?
+    "evaluatePreconfiguredWaf('${rule.name}', {'sensitivity': ${rule.sensitivity}}) && !(${local.cloud_armor_method_enforcement_exception_expression})" :
+    "evaluatePreconfiguredWaf('${rule.name}', {'sensitivity': ${rule.sensitivity}})"
+  }
 
   # Groups var.cloud_armor_waf_exclusions by preconfigured rule set name so the rule dynamic block
   # above can look up the exclusions (if any) that apply to each preconfigured WAF rule it renders.

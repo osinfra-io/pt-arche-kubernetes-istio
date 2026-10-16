@@ -50,7 +50,7 @@ tofu init
 tofu test
 ```
 
-### Local gateway-stack testing
+### Local Pneuma stack testing
 
 Run this command in Copilot CLI with the [`platform-grouping` plugin](https://github.com/osinfra-io/pt-ai-plugins/tree/main/plugins/platform-grouping) installed:
 

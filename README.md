@@ -58,6 +58,8 @@ Run this command in Copilot CLI with the [`platform-grouping` plugin](https://gi
 /platform-grouping:local-integration-testing
 ```
 
+The fixtures, shared gateway, and verifiers live in [`pt-pneuma`](https://github.com/osinfra-io/pt-pneuma/tree/main/tests/integration) (`tests/integration`); this repository keeps only mocked tests.
+
 ## 📦 Release
 
 To release a new version, simply push a new tag to the repository. The tag should be in the format `vX.Y.Z` where `X`, `Y`, and `Z` are integers.

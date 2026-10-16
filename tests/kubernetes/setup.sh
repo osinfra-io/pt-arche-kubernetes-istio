@@ -55,7 +55,7 @@ done
 
 rm -f "${WORK_DIR}/gateway-localhost.key" "${WORK_DIR}/gateway-localhost.crt"
 openssl req \
-  -addext "subjectAltName=DNS:localhost,DNS:authentik.localhost,DNS:dev.localhost,DNS:agentgateway.localhost" \
+  -addext "subjectAltName=DNS:localhost,DNS:authentik.localhost,DNS:dev.localhost,DNS:agentgateway.localhost,DNS:openbao.localhost" \
   -keyout "${WORK_DIR}/gateway-localhost.key" \
   -new \
   -newkey rsa:2048 \

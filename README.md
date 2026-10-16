@@ -12,7 +12,7 @@ Every cluster is assigned its own logical Istio network (derived from `cluster_p
 
 The regional module requires the shared cert-manager root certificate and private key. Enabling `enable_istio_gateway` exposes public ingress and stores the CA in `istio-ingress/cert-manager-ca` and OpenTofu state; protect both. The Istio chart and image version is declared once in `regional/shared/versions.tofu` and shared by the GKE wrapper and local runtime. The default chart is a release candidate.
 
-Shared Cloud Armor and SSL policies named `pneuma-ingress` are managed outside this module by Pneuma's main workspace and must exist before deploying regional ingress. The Istio BackendConfig and FrontendConfig reference these shared policies; the BackendConfig retains its service-specific name and health check.
+Shared Cloud Armor and SSL policies named `shared-ingress` are managed outside this module by Pneuma's main workspace and must exist before deploying regional ingress. The Istio BackendConfig and FrontendConfig reference these shared policies; the BackendConfig retains its service-specific name and health check.
 
 > [!TIP]
 > You can check the [tests/fixtures](tests/fixtures) directory for example configurations. These fixtures set up the system for testing by providing all the necessary initial code, thus creating good examples on which to base your configurations.

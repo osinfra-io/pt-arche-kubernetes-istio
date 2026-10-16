@@ -352,7 +352,7 @@ resource "kubernetes_manifest" "istio_gateway_backendconfig" {
         unhealthyThreshold = "2"
       }
       securityPolicy = {
-        name = "pneuma-ingress"
+        name = "shared-ingress"
       }
     }
   }
@@ -413,7 +413,7 @@ resource "kubernetes_manifest" "istio_gateway_frontendconfig" {
       redirectToHttps = {
         enabled = true
       }
-      sslPolicy = "pneuma-ingress"
+      sslPolicy = "shared-ingress"
     }
   }
 }

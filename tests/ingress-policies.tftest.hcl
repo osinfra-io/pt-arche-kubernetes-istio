@@ -18,12 +18,12 @@ run "regional_shared_policy_references" {
   }
 
   assert {
-    condition     = kubernetes_manifest.istio_gateway_backendconfig.manifest.spec.securityPolicy.name == "pneuma-ingress"
+    condition     = kubernetes_manifest.istio_gateway_backendconfig.manifest.spec.securityPolicy.name == "shared-ingress"
     error_message = "The Istio BackendConfig must reference the externally managed shared Cloud Armor policy."
   }
 
   assert {
-    condition     = kubernetes_manifest.istio_gateway_frontendconfig.manifest.spec.sslPolicy == "pneuma-ingress"
+    condition     = kubernetes_manifest.istio_gateway_frontendconfig.manifest.spec.sslPolicy == "shared-ingress"
     error_message = "The Istio FrontendConfig must reference the externally managed shared SSL policy."
   }
 

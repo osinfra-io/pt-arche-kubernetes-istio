@@ -5,7 +5,6 @@
 # https://opentofu.org/docs/cli/commands/test/#the-mock_provider-blocks
 
 mock_provider "google" {}
-mock_provider "google-beta" {}
 mock_provider "helm" {}
 mock_provider "kubernetes" {}
 
@@ -27,14 +26,6 @@ run "default" {
   }
 
   variables {
-    cloud_armor_allow_rules = {
-      authenticated_api = {
-        description = "Allow authenticated API configuration"
-        expression  = "request.headers['host'] == 'authentik.mock-domain' && request.path.startsWith('/api/v3/')"
-        priority    = 9000
-      }
-    }
-
     gateway_dns = {
       "mock-environment.mock-subdomain.mock-domain" = {
         managed_zone = "mock-environment-mock-subdomain-mock-domain"

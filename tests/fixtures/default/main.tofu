@@ -6,9 +6,6 @@ terraform {
     google = {
       source = "hashicorp/google"
     }
-    google-beta = {
-      source = "hashicorp/google-beta"
-    }
   }
 }
 
@@ -18,8 +15,7 @@ terraform {
 module "test" {
   source = "../../../"
 
-  cloud_armor_allow_rules = var.cloud_armor_allow_rules
-  gateway_dns             = var.gateway_dns
+  gateway_dns = var.gateway_dns
 
   labels = {
     "mock-key" = "mock-value"

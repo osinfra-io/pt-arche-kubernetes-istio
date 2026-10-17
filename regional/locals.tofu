@@ -2,6 +2,10 @@
 # https://opentofu.org/docs/language/values/locals
 
 locals {
+  gateway_dns_record_names = {
+    for domain, _ in var.gateway_dns : domain => "${domain}."
+  }
+
   gateway_domains = keys(var.gateway_dns)
 
   # Gateway listener. A single catch-all HTTPS listener terminates TLS for every
@@ -89,8 +93,25 @@ locals {
     }
   })
 
+  # East-west gateway listener. HBONE-only, double-HBONE terminate, per the ambient
+  # multicluster install guide — this is the only supported ambient east-west shape.
+  istio_east_west_gateway_listeners = [
+    {
+      name     = "mesh"
+      port     = 15008
+      protocol = "HBONE"
+
+      tls = {
+        mode = "Terminate"
+
+        options = {
+          "gateway.istio.io/tls-terminate-mode" = "ISTIO_MUTUAL"
+        }
+      }
+    }
+  ]
+
   istio_gateway_address = var.enable_istio_gateway ? google_compute_global_address.istio_gateway.address : null
-  istio_image_hub       = "${var.artifact_registry}/istio"
 
   # Strategic-merge patch for the generated gateway Deployment. istiod names the gateway
   # container "istio-proxy". Ports the resources, tolerations, topology spread, and Datadog
@@ -198,6 +219,8 @@ locals {
     }
   })
 
+  istio_gateway_name = "istio-gateway-${module.core_helpers.region}-${module.core_helpers.zone}"
+
   # Strategic-merge patch creating a PodDisruptionBudget for the generated gateway Deployment.
   istio_gateway_pdb_patch = yamlencode({
     spec = {
@@ -213,25 +236,7 @@ locals {
     }
   })
 
-  istio_gateway_name = "istio-gateway-${module.core_helpers.region}-${module.core_helpers.zone}"
-
-  # East-west gateway listener. HBONE-only, double-HBONE terminate, per the ambient
-  # multicluster install guide — this is the only supported ambient east-west shape.
-  istio_east_west_gateway_listeners = [
-    {
-      name     = "mesh"
-      port     = 15008
-      protocol = "HBONE"
-
-      tls = {
-        mode = "Terminate"
-
-        options = {
-          "gateway.istio.io/tls-terminate-mode" = "ISTIO_MUTUAL"
-        }
-      }
-    }
-  ]
+  istio_image_hub = "${var.artifact_registry}/istio"
 
   # Every cluster is its own logical Istio network so cross-cluster ambient traffic takes the
   # supported multi-network east-west gateway path (same-network ambient multicluster is

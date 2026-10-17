@@ -3,7 +3,7 @@
 
 resource "google_compute_global_address" "istio_gateway_mci" {
   lifecycle {
-    enabled = var.gke_fleet_host_project_id == ""
+    enabled = local.gateway_mci_enabled
   }
 
   labels  = var.labels
@@ -19,7 +19,7 @@ resource "google_compute_global_address" "istio_gateway_mci" {
 
 resource "google_compute_managed_ssl_certificate" "istio_gateway_mci" {
   lifecycle {
-    enabled = var.gke_fleet_host_project_id == ""
+    enabled = local.gateway_mci_enabled
   }
 
   managed {
@@ -37,7 +37,7 @@ resource "google_dns_record_set" "istio_gateway_mcis" {
   for_each = var.gateway_dns
 
   managed_zone = each.value.managed_zone
-  name         = "${each.key}."
+  name         = local.gateway_dns_record_names[each.key]
   project      = each.value.project
   rrdatas      = [google_compute_global_address.istio_gateway_mci.address]
   ttl          = 300

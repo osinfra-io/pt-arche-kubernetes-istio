@@ -10,7 +10,7 @@ variable "ca_address" {
 variable "chart_repository" {
   description = "The repository to pull the Istio Helm charts from"
   type        = string
-  default     = "https://istio-release.storage.googleapis.com/charts"
+  default     = "https://blob.istio.io/istio-release/charts"
 }
 
 variable "cluster_name" {

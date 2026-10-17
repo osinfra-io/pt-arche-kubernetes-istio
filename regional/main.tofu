@@ -57,7 +57,7 @@ resource "google_dns_record_set" "istio_gateways" {
   for_each = var.gateway_dns
 
   managed_zone = each.value.managed_zone
-  name         = "${each.key}."
+  name         = local.gateway_dns_record_names[each.key]
   project      = each.value.project
   rrdatas      = [google_compute_global_address.istio_gateway.address]
   ttl          = 300
@@ -515,7 +515,7 @@ resource "kubernetes_manifest" "istio_gateway_mcs" {
 
     metadata = {
       annotations = {
-        "cloud.google.com/backend-config" = jsonencode({ "default" = "${kubernetes_manifest.istio_gateway_backendconfig.manifest.metadata.name}" })
+        "cloud.google.com/backend-config" = jsonencode({ "default" = kubernetes_manifest.istio_gateway_backendconfig.manifest.metadata.name })
         "cloud.google.com/neg"            = jsonencode({ "ingress" = true })
         "networking.gke.io/app-protocols" = jsonencode({ "https" = "HTTPS" })
       }

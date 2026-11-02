@@ -35,6 +35,63 @@ run "default" {
   }
 }
 
+run "retained_certificate" {
+  command = plan
+
+  module {
+    source = "./tests/fixtures/default"
+  }
+
+  variables {
+    gateway_dns = {
+      "a.mock-domain" = {
+        managed_zone = "mock-zone"
+        project      = "mock-dns-project"
+      }
+      "b.mock-domain" = {
+        managed_zone = "mock-zone"
+        project      = "mock-dns-project"
+      }
+    }
+
+    gateway_retained_domain_sets = [["a.mock-domain"]]
+  }
+
+  assert {
+    condition     = length(module.test.gateway_mci_ssl_certificate_names) == 2
+    error_message = "The current and retained domain sets must each get their own certificate."
+  }
+}
+
+run "detached_retained_certificate" {
+  command = plan
+
+  module {
+    source = "./tests/fixtures/default"
+  }
+
+  variables {
+    gateway_attach_retained_certificates = false
+    gateway_dns = {
+      "a.mock-domain" = {
+        managed_zone = "mock-zone"
+        project      = "mock-dns-project"
+      }
+      "b.mock-domain" = {
+        managed_zone = "mock-zone"
+        project      = "mock-dns-project"
+      }
+    }
+
+    gateway_retained_domain_sets = [["a.mock-domain"]]
+  }
+
+  assert {
+    condition     = length(module.test.gateway_mci_ssl_certificate_names) == 1
+    error_message = "Only the current certificate may be attached once retained certificates are detached."
+  }
+}
+
 run "default_regional" {
   command = apply
 

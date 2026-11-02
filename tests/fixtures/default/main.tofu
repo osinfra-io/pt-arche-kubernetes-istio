@@ -15,7 +15,10 @@ terraform {
 module "test" {
   source = "../../../"
 
-  gateway_dns = var.gateway_dns
+  gateway_attach_retained_certificates = var.gateway_attach_retained_certificates
+  gateway_dns                          = var.gateway_dns
+
+  gateway_retained_domain_sets = var.gateway_retained_domain_sets
 
   labels = {
     "mock-key" = "mock-value"

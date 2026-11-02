@@ -8,6 +8,8 @@ locals {
 
   gateway_domains = keys(var.gateway_dns)
 
+  gateway_mci_pre_shared_certs = join(",", var.gateway_mci_ssl_certificate_names)
+
   # Gateway listener. A single catch-all HTTPS listener terminates TLS for every
   # team's traffic. hostname is null so Envoy builds a default (no-SNI) filter
   # chain: the fronting GCP L7 load balancer re-originates TLS to the backend

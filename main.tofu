@@ -17,16 +17,18 @@ resource "google_compute_global_address" "istio_gateway_mci" {
 # The declarative generation of a Kubernetes ManagedCertificate resource is not supported on
 # MultiClusterIngress resources. #36
 
-resource "google_compute_managed_ssl_certificate" "istio_gateway_mci" {
-  lifecycle {
-    enabled = local.gateway_mci_enabled
-  }
+# Managed certificate domains are immutable and a certificate cannot be deleted while the load
+# balancer's target proxy references it. Each domain set therefore gets its own certificate, named
+# by a hash of its domains, so adding a domain creates a new certificate instead of replacing one.
+
+resource "google_compute_managed_ssl_certificate" "istio_gateway_mcis" {
+  for_each = local.gateway_certificates
 
   managed {
-    domains = local.gateway_domains
+    domains = each.value
   }
 
-  name    = "istio-gateway-mci"
+  name    = each.key
   project = var.project
 }
 

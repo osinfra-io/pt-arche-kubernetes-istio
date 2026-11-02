@@ -26,6 +26,8 @@ module "test" {
   enable_istio_gateway = true
   gateway_dns          = var.gateway_dns
 
+  gateway_mci_ssl_certificate_names = ["mock-certificate"]
+
   labels = {
     "mock-key" = "mock-value"
   }

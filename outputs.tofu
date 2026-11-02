@@ -6,7 +6,7 @@ output "gateway_mci_global_address" {
   value       = local.gateway_mci_global_address
 }
 
-output "gateway_mci_ssl_certificate_name" {
-  description = "The name of the SSL certificate for the Istio Gateway multi-cluster ingress"
-  value       = local.gateway_mci_ssl_certificate_name
+output "gateway_mci_ssl_certificate_names" {
+  description = "The names of the SSL certificates for the Istio Gateway multi-cluster ingress, current certificate first"
+  value       = local.gateway_certificate_names
 }

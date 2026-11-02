@@ -111,6 +111,12 @@ variable "gateway_mci_global_address" {
   default     = ""
 }
 
+variable "gateway_mci_ssl_certificate_names" {
+  description = "The names of the pre-shared SSL certificates attached to the Istio Gateway multi-cluster ingress"
+  type        = list(string)
+  default     = []
+}
+
 variable "gateway_memory_limits" {
   description = "The memory limit for the Istio gateway"
   type        = string

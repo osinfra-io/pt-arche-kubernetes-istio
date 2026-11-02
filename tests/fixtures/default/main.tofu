@@ -17,6 +17,8 @@ module "test" {
 
   gateway_dns = var.gateway_dns
 
+  gateway_retained_domain_sets = var.gateway_retained_domain_sets
+
   labels = {
     "mock-key" = "mock-value"
   }

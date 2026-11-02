@@ -10,6 +10,12 @@ variable "gateway_dns" {
   default = {}
 }
 
+variable "gateway_retained_domain_sets" {
+  description = "Previous gateway domain sets whose certificates are kept alongside the current one. Set it to the domains before a change and clear it once the change is deployed, so a certificate is only deleted after the load balancer stops using it"
+  type        = list(list(string))
+  default     = []
+}
+
 variable "gke_fleet_host_project_id" {
   description = "The project ID of the GKE Hub host project"
   type        = string

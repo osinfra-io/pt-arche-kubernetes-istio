@@ -12,6 +12,7 @@ run "regional_shared_policy_references" {
   variables {
     cluster_prefix                              = "mock"
     enable_istio_gateway                        = true
+    gateway_mci_ssl_certificate_names           = ["mock-certificate"]
     project                                     = "mock-project"
     tls_self_signed_cert_cert_manager_root_cert = "mock-cert"
     tls_self_signed_cert_cert_manager_root_key  = "mock-key"

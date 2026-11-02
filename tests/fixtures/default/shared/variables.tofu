@@ -9,6 +9,12 @@ variable "gateway_dns" {
   }))
 }
 
+variable "gateway_attach_retained_certificates" {
+  description = "Whether retained certificates stay attached"
+  type        = bool
+  default     = true
+}
+
 variable "gateway_retained_domain_sets" {
   description = "Previous gateway domain sets whose certificates are kept"
   type        = list(list(string))

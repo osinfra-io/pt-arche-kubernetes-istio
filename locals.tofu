@@ -3,6 +3,13 @@
 
 locals {
   # The current domain set comes first so its certificate leads the pre-shared-certs list.
+  # Retained certificates stay managed but are only attached while gateway_attach_retained_certificates is true.
+  gateway_attached_certificate_names = slice(
+    local.gateway_certificate_names,
+    0,
+    var.gateway_attach_retained_certificates ? length(local.gateway_certificate_names) : min(1, length(local.gateway_certificate_names))
+  )
+
   gateway_certificate_domain_sets = local.gateway_mci_enabled ? [
     for domain_set in concat([local.gateway_domains], var.gateway_retained_domain_sets) : sort(domain_set)
     if length(domain_set) > 0

@@ -58,6 +58,12 @@ locals {
     spec = {
       template = {
         metadata = {
+          labels = {
+            "tags.datadoghq.com/env"     = module.core_helpers.environment
+            "tags.datadoghq.com/service" = "istio-gateway"
+            "tags.datadoghq.com/version" = var.istio_version
+          }
+
           annotations = {
             "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
             "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
@@ -158,8 +164,28 @@ locals {
 
               env = [
                 {
-                  name  = "DD_SERVICE"
-                  value = "istio-gateway"
+                  name = "DD_ENV"
+                  valueFrom = {
+                    fieldRef = {
+                      fieldPath = "metadata.labels['tags.datadoghq.com/env']"
+                    }
+                  }
+                },
+                {
+                  name = "DD_SERVICE"
+                  valueFrom = {
+                    fieldRef = {
+                      fieldPath = "metadata.labels['tags.datadoghq.com/service']"
+                    }
+                  }
+                },
+                {
+                  name = "DD_VERSION"
+                  valueFrom = {
+                    fieldRef = {
+                      fieldPath = "metadata.labels['tags.datadoghq.com/version']"
+                    }
+                  }
                 }
               ]
 

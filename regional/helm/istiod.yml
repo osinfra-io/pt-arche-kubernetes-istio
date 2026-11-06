@@ -36,6 +36,7 @@ podAnnotations:
   ad.datadoghq.com/discovery.instances: |
     [
       {
+        "istio_mode": "ambient",
         "istiod_endpoint": "http://%%host%%:15014/metrics",
         "use_openmetrics": "true"
       }

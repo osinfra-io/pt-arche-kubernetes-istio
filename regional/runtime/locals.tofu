@@ -124,6 +124,20 @@ locals {
       clusterName = var.cluster_name
     }
 
+    podAnnotations = {
+      "ad.datadoghq.com/istio-proxy.checks" = jsonencode({
+        istio = {
+          instances = [
+            {
+              istio_mode       = "ambient"
+              use_openmetrics  = "true"
+              ztunnel_endpoint = "http://%%host%%:15020/stats/prometheus"
+            }
+          ]
+        }
+      })
+    }
+
     podLabels = {
       "tags.datadoghq.com/env"     = var.environment
       "tags.datadoghq.com/service" = "istio-ztunnel"

@@ -68,7 +68,7 @@ locals {
             "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
             "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
             "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15090/stats/prometheus\"\n  }\n]\n"
-            "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"envoy\"}]"
+            "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"istio\"}]"
 
             "apm.datadoghq.com/env" = jsonencode({
               DD_ENV     = module.core_helpers.environment
@@ -160,7 +160,7 @@ locals {
             "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
             "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
             "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15090/stats/prometheus\"\n  }\n]\n"
-            "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"envoy\"}]"
+            "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"istio\"}]"
 
             "apm.datadoghq.com/env" = jsonencode({
               DD_ENV     = module.core_helpers.environment

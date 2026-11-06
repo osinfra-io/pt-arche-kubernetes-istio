@@ -79,6 +79,8 @@ locals {
               memory = var.proxy_memory_requests
             }
           }
+
+          tracer = "datadog"
         }
       },
       var.ca_address == null ? { caAddress = null } : { caAddress = var.ca_address }

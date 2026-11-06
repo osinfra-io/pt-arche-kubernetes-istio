@@ -60,7 +60,7 @@ locals {
         metadata = {
           labels = {
             "tags.datadoghq.com/env"     = module.core_helpers.environment
-            "tags.datadoghq.com/service" = "istio-gateway"
+            "tags.datadoghq.com/service" = "istio-eastwestgateway"
             "tags.datadoghq.com/version" = var.istio_version
           }
 
@@ -82,6 +82,33 @@ locals {
           containers = [
             {
               name = "istio-proxy"
+
+              env = [
+                {
+                  name = "DD_ENV"
+                  valueFrom = {
+                    fieldRef = {
+                      fieldPath = "metadata.labels['tags.datadoghq.com/env']"
+                    }
+                  }
+                },
+                {
+                  name = "DD_SERVICE"
+                  valueFrom = {
+                    fieldRef = {
+                      fieldPath = "metadata.labels['tags.datadoghq.com/service']"
+                    }
+                  }
+                },
+                {
+                  name = "DD_VERSION"
+                  valueFrom = {
+                    fieldRef = {
+                      fieldPath = "metadata.labels['tags.datadoghq.com/version']"
+                    }
+                  }
+                }
+              ]
 
               resources = {
                 limits = {

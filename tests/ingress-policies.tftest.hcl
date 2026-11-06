@@ -37,4 +37,14 @@ run "regional_shared_policy_references" {
     )
     error_message = "The Istio BackendConfig must retain its service-specific name and health check."
   }
+
+  assert {
+    condition = alltrue([
+      kubernetes_manifest.istio_east_west_gateway.manifest.spec.infrastructure.labels["tags.datadoghq.com/source"] == "istio",
+      jsondecode(yamldecode(kubernetes_config_map_v1.istio_east_west_gateway_options.data.deployment).spec.template.metadata.annotations["ad.datadoghq.com/istio-proxy.logs"])[0].source == "istio",
+      kubernetes_manifest.istio_gateway.manifest.spec.infrastructure.labels["tags.datadoghq.com/source"] == "istio",
+      jsondecode(yamldecode(kubernetes_config_map_v1.istio_gateway_options.data.deployment).spec.template.metadata.annotations["ad.datadoghq.com/istio-proxy.logs"])[0].source == "istio"
+    ])
+    error_message = "Both Istio gateways must send logs to the Istio integration source."
+  }
 }

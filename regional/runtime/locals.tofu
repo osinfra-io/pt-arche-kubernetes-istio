@@ -9,6 +9,15 @@ locals {
         hub = var.image_hub
       }
 
+      podAnnotations = {
+        "ad.datadoghq.com/install-cni.logs" = jsonencode([
+          {
+            service = "istio-cni"
+            source  = "istio"
+          }
+        ])
+      }
+
       podLabels = {
         "tags.datadoghq.com/env"     = var.environment
         "tags.datadoghq.com/service" = "istio-cni"
@@ -138,6 +147,12 @@ locals {
           ]
         }
       })
+      "ad.datadoghq.com/istio-proxy.logs" = jsonencode([
+        {
+          service = "istio-ztunnel"
+          source  = "istio"
+        }
+      ])
     }
 
     podLabels = {

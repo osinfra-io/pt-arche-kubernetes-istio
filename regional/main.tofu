@@ -254,7 +254,7 @@ resource "kubernetes_manifest" "istio_east_west_gateway" {
         labels = {
           "tags.datadoghq.com/env"     = module.core_helpers.environment
           "tags.datadoghq.com/service" = "istio-eastwestgateway"
-          "tags.datadoghq.com/source"  = "envoy"
+          "tags.datadoghq.com/source"  = "istio"
           "tags.datadoghq.com/version" = var.istio_version
           "topology.istio.io/network"  = local.istio_network
         }
@@ -310,7 +310,7 @@ resource "kubernetes_manifest" "istio_gateway" {
         labels = {
           "tags.datadoghq.com/env"     = module.core_helpers.environment
           "tags.datadoghq.com/service" = "istio-gateway"
-          "tags.datadoghq.com/source"  = "envoy"
+          "tags.datadoghq.com/source"  = "istio"
           "tags.datadoghq.com/version" = var.istio_version
         }
 

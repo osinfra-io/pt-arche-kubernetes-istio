@@ -61,7 +61,7 @@ locals {
           annotations = {
             "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
             "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
-            "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15020/stats/prometheus\"\n  }\n]\n"
+            "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15090/stats/prometheus\"\n  }\n]\n"
             "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"envoy\"}]"
 
             "apm.datadoghq.com/env" = jsonencode({
@@ -126,7 +126,7 @@ locals {
           annotations = {
             "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
             "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
-            "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15020/stats/prometheus\"\n  }\n]\n"
+            "ad.datadoghq.com/istio-proxy.instances"    = "[\n  {\n   \"openmetrics_endpoint\": \"http://%%host%%:15090/stats/prometheus\"\n  }\n]\n"
             "ad.datadoghq.com/istio-proxy.logs"         = "[{\"source\":\"envoy\"}]"
 
             "apm.datadoghq.com/env" = jsonencode({

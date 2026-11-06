@@ -117,16 +117,12 @@ locals {
 
   # Strategic-merge patch for the generated gateway Deployment. istiod names the gateway
   # container "istio-proxy". Ports the resources, tolerations, topology spread, and Datadog
-  # pod labels and annotations (Datadog service identity, autodiscovery, APM env, and Istio
-  # proxy tracing config) that were set on the Helm gateway release.
+  # pod annotations (autodiscovery, APM env, and Istio proxy tracing config) that were set on
+  # the Helm gateway release.
   istio_gateway_deployment_patch = yamlencode({
     spec = {
       template = {
         metadata = {
-          labels = {
-            app = "istio-gateway"
-          }
-
           annotations = {
             "ad.datadoghq.com/istio-proxy.check_names"  = "[\"envoy\"]"
             "ad.datadoghq.com/istio-proxy.init_configs" = "[{}]"
@@ -159,6 +155,13 @@ locals {
           containers = [
             {
               name = "istio-proxy"
+
+              env = [
+                {
+                  name  = "DD_SERVICE"
+                  value = "istio-gateway"
+                }
+              ]
 
               resources = {
                 limits = {

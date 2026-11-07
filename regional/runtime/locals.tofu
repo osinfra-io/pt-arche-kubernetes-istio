@@ -21,7 +21,6 @@ locals {
       podLabels = {
         "tags.datadoghq.com/env"     = var.environment
         "tags.datadoghq.com/service" = "istio-cni"
-        "tags.datadoghq.com/source"  = "istio"
         "tags.datadoghq.com/version" = var.istio_version
       }
 
@@ -52,6 +51,7 @@ locals {
 
     deploymentLabels = {
       "tags.datadoghq.com/env"     = var.environment
+      "tags.datadoghq.com/service" = "istio-control-plane"
       "tags.datadoghq.com/version" = var.istio_version
     }
 
@@ -102,6 +102,7 @@ locals {
 
     podLabels = {
       "tags.datadoghq.com/env"     = var.environment
+      "tags.datadoghq.com/service" = "istio-control-plane"
       "tags.datadoghq.com/version" = var.istio_version
     }
 
@@ -160,7 +161,6 @@ locals {
     podLabels = {
       "tags.datadoghq.com/env"     = var.environment
       "tags.datadoghq.com/service" = "istio-ztunnel"
-      "tags.datadoghq.com/source"  = "istio"
       "tags.datadoghq.com/version" = var.istio_version
     }
 

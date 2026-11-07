@@ -7,10 +7,6 @@ profile: ambient
 cpu:
   targetAverageUtilization: 85
 
-deploymentLabels:
-  tags.datadoghq.com/service: istio-control-plane
-  tags.datadoghq.com/source: istio
-
 env:
   ENABLE_CA_SERVER: "false"
   PILOT_ENABLE_IP_AUTOALLOCATE: "true"
@@ -43,10 +39,6 @@ podAnnotations:
     ]
 
   ad.datadoghq.com/discovery.logs: '[{"source":"istio"}]'
-
-podLabels:
-  tags.datadoghq.com/service: istio-control-plane
-  tags.datadoghq.com/source: istio
 
 rollingMaxSurge: 100%
 rollingMaxUnavailable: 25%

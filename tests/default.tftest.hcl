@@ -149,4 +149,20 @@ run "ztunnel_access_logging" {
     condition     = yamldecode(helm_release.ztunnel.values[0]).logLevel == "info,access=warn"
     error_message = "ztunnel must suppress successful access logs while retaining access warnings/errors and other INFO logs."
   }
+
+  assert {
+    condition = alltrue([
+      for workload in [
+        { service = "istio-cni", values = yamldecode(helm_release.cni.values[0]) },
+        { service = "istio-control-plane", values = yamldecode(helm_release.istiod.values[1]) },
+        { service = "istio-ztunnel", values = yamldecode(helm_release.ztunnel.values[0]) }
+      ] :
+      workload.values.podLabels == {
+        "tags.datadoghq.com/env"     = var.environment
+        "tags.datadoghq.com/service" = workload.service
+        "tags.datadoghq.com/version" = var.istio_version
+      }
+    ])
+    error_message = "Istio runtime pod templates must retain their existing services and full unified tags without nonstandard source labels."
+  }
 }

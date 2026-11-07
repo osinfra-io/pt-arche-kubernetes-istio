@@ -131,6 +131,8 @@ locals {
       }
     )
 
+    logLevel = "info,access=warn"
+
     multiCluster = {
       clusterName = var.cluster_name
     }

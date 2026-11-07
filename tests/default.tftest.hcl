@@ -112,3 +112,41 @@ run "default_regional" {
 variables {
   project = "mock-project"
 }
+
+run "ztunnel_access_logging" {
+  command = plan
+
+  module {
+    source = "./regional/runtime"
+  }
+
+  variables {
+    cluster_name            = "mock-cluster"
+    cni_cpu_requests        = "100m"
+    cni_memory_requests     = "128Mi"
+    cni_platform            = ""
+    environment             = "sandbox"
+    image_hub               = "docker.io/istio"
+    network                 = "mock-network"
+    pilot_autoscale_max     = 1
+    pilot_autoscale_min     = 1
+    pilot_cpu_limits        = "500m"
+    pilot_cpu_requests      = "100m"
+    pilot_memory_limits     = "512Mi"
+    pilot_memory_requests   = "128Mi"
+    pilot_replica_count     = 1
+    proxy_cpu_limits        = "500m"
+    proxy_cpu_requests      = "100m"
+    proxy_memory_limits     = "256Mi"
+    proxy_memory_requests   = "128Mi"
+    ztunnel_cpu_limits      = "500m"
+    ztunnel_cpu_requests    = "100m"
+    ztunnel_memory_limits   = "512Mi"
+    ztunnel_memory_requests = "128Mi"
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.ztunnel.values[0]).logLevel == "info,access=warn"
+    error_message = "ztunnel must suppress successful access logs while retaining access warnings/errors and other INFO logs."
+  }
+}

@@ -14,7 +14,7 @@ permissions:
 jobs:
   add-to-osinfra-project:
     name: Open Source Infrastructure (as Code)
-    uses: osinfra-io/pt-techne-misc-workflows/.github/workflows/add-to-project.yml@08a1f8d55cb21e733dc36c5abe3cb0b277114697  # v0.2.9
+    uses: osinfra-io/pt-techne-misc-workflows/.github/workflows/add-to-project.yml@873e5eb069348e446ddc20c9c96661073d4bec42  # v0.3.5
     with:
       project_id: 1
     secrets:
